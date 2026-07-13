@@ -3,12 +3,8 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/money";
+import { getCurrentPeriodKey } from "@/lib/period";
 import { useCategoryBreakdown } from "@/hooks/useDashboard";
-
-function currentPeriodKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
 
 const SLICE_COLORS = [
   "var(--color-primary)",
@@ -21,7 +17,7 @@ const SLICE_COLORS = [
 
 export function CategoryBreakdownChart() {
   const { data, isLoading, isError } = useCategoryBreakdown(
-    currentPeriodKey()
+    getCurrentPeriodKey()
   );
 
   return (

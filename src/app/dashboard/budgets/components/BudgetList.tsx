@@ -61,7 +61,9 @@ function BudgetRow({
 
 export function BudgetList({ period }: { period: string }) {
   const { data: budgets, isLoading, isError } = useBudgets(period);
-  const { data: categories } = useCategories({ includeArchived: true });
+  const { data: categories, isLoading: categoriesLoading } = useCategories({
+    includeArchived: true,
+  });
 
   if (isLoading) {
     return <p className="text-muted-foreground">Cargando presupuestos...</p>;
@@ -86,9 +88,13 @@ export function BudgetList({ period }: { period: string }) {
   return (
     <div className="flex flex-col gap-3">
       {budgets.map((budget) => {
-        const categoryName =
-          categories?.find((category) => category._id === budget.categoryId)
-            ?.name ?? "Categoría eliminada";
+        // While categories are still loading, `.find()` would otherwise
+        // resolve to undefined and falsely label a perfectly valid category
+        // as deleted for a moment — show a neutral placeholder instead.
+        const categoryName = categoriesLoading
+          ? "…"
+          : (categories?.find((category) => category._id === budget.categoryId)
+              ?.name ?? "Categoría eliminada");
         return (
           <BudgetRow
             key={budget._id}

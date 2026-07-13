@@ -73,6 +73,27 @@ describe("Sidebar", () => {
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: "/login" });
   });
 
+  it("renders the mobile drawer as an accessible dialog with a proper name", async () => {
+    const user = userEvent.setup();
+    render(<Sidebar />);
+
+    await user.click(screen.getByRole("button", { name: /abrir menú/i }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName(
+      /finanzas personales/i
+    );
+  });
+
+  it("closes the mobile drawer when Escape is pressed", async () => {
+    const user = userEvent.setup();
+    render(<Sidebar />);
+
+    await user.click(screen.getByRole("button", { name: /abrir menú/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("opens and closes the mobile drawer", async () => {
     const user = userEvent.setup();
     render(<Sidebar />);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -68,19 +68,33 @@ export function BudgetForm({ period }: { period: string }) {
     ) as unknown as Resolver<BudgetFormValues>,
   });
 
-  useEffect(() => {
-    if (!isOpen) return;
+  // Tracks which budget (or "create") the form was last reset() for, so a
+  // background refetch of useBudgets while the modal is open — no staleTime
+  // is set on that query — doesn't silently wipe an in-progress edit. Only
+  // a real open/close cycle or switching to a different budget re-seeds it.
+  const initializedForRef = useRef<string | null>(null);
 
-    if (isEditing && editingBudget) {
+  useEffect(() => {
+    if (!isOpen) {
+      initializedForRef.current = null;
+      return;
+    }
+
+    const key = editingBudgetId ?? "create";
+    if (initializedForRef.current === key) return;
+
+    if (isEditing) {
+      if (!editingBudget) return;
       reset({
         categoryId: editingBudget.categoryId,
         periodKey: editingBudget.periodKey,
         limitAmount: editingBudget.limitAmount,
       });
-    } else if (!isEditing) {
+    } else {
       reset({ categoryId: "", periodKey: period, limitAmount: 0 });
     }
-  }, [isOpen, isEditing, editingBudget, period, reset]);
+    initializedForRef.current = key;
+  }, [isOpen, isEditing, editingBudget, editingBudgetId, period, reset]);
 
   const onSubmit = async (values: BudgetFormValues) => {
     try {

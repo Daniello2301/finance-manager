@@ -9,11 +9,19 @@ import { BudgetSummaryWidget } from "./components/BudgetSummaryWidget";
 import { RecentTransactionsWidget } from "./components/RecentTransactionsWidget";
 import { EmptyDashboardState } from "./components/EmptyDashboardState";
 
+type RecentActivityStatus = "loading" | "error" | "empty" | "data";
+
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { data: transactions, isLoading } = useRecentTransactions(1);
-  const showEmptyState = !isLoading && transactions?.length === 0;
-  const showWidgets = !isLoading && !!transactions && transactions.length > 0;
+  const { data: transactions, isLoading, isError } = useRecentTransactions(1);
+
+  const status: RecentActivityStatus = isLoading
+    ? "loading"
+    : isError
+      ? "error"
+      : !transactions?.length
+        ? "empty"
+        : "data";
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -23,9 +31,15 @@ export default function DashboardPage() {
 
       <BalanceSummaryCard />
 
-      {showEmptyState && <EmptyDashboardState />}
+      {status === "error" && (
+        <p className="text-destructive">
+          No se pudo cargar tu actividad reciente. Intenta de nuevo.
+        </p>
+      )}
 
-      {showWidgets && (
+      {status === "empty" && <EmptyDashboardState />}
+
+      {status === "data" && (
         <>
           <div className="grid gap-4 lg:grid-cols-2">
             <TrendChart />

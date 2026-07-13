@@ -162,6 +162,27 @@ describe("BudgetForm", () => {
     expect(close).toHaveBeenCalled();
   });
 
+  it("does not reset an in-progress edit when the budgets query refetches in the background", async () => {
+    mockStore({ isOpen: true, editingBudgetId: "budget-1" });
+    vi.mocked(useBudgets).mockReturnValue({ data: [existingBudget] } as never);
+    const user = userEvent.setup();
+    const { rerender } = render(<BudgetForm period="2026-07" />);
+
+    await user.clear(screen.getByLabelText(/límite mensual/i));
+    await user.type(screen.getByLabelText(/límite mensual/i), "999999");
+    expect(screen.getByLabelText(/límite mensual/i)).toHaveValue(999999);
+
+    // Same budget id, but a new object/array reference and different
+    // server-computed fields — simulates a React Query background refetch
+    // (useBudgets has no staleTime) while the modal stays open.
+    vi.mocked(useBudgets).mockReturnValue({
+      data: [{ ...existingBudget, spentAmount: 500000, percentUsed: 83 }],
+    } as never);
+    rerender(<BudgetForm period="2026-07" />);
+
+    expect(screen.getByLabelText(/límite mensual/i)).toHaveValue(999999);
+  });
+
   it("shows a root error and does not close when the mutation fails", async () => {
     const { close } = mockStore({ isOpen: true, editingBudgetId: null });
     createMutateAsync.mockRejectedValueOnce(new Error("Falló la creación"));

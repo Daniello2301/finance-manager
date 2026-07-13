@@ -111,6 +111,10 @@ export function useRecomputeBalance() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      // The dashboard's balance summary reads from Account.currentBalance
+      // too — without this, a just-recomputed balance still shows stale on
+      // /dashboard until the summary query's staleTime elapses.
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

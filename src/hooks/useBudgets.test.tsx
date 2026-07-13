@@ -34,6 +34,19 @@ function createWrapper() {
   };
 }
 
+function createWrapperWithClient() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return { Wrapper, queryClient };
+}
+
 describe("useBudgets hooks", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -134,6 +147,34 @@ describe("useBudgets hooks", () => {
       "/api/budgets/copy",
       expect.objectContaining({ method: "POST" })
     );
+  });
+
+  it("useCreateBudget also invalidates the dashboard summary query", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(201, { budget: { _id: "1" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { Wrapper, queryClient } = createWrapperWithClient();
+    queryClient.setQueryData(["dashboard", "summary"], {
+      balances: [],
+      topBudgets: [],
+    });
+
+    const { result } = renderHook(() => useCreateBudget(), {
+      wrapper: Wrapper,
+    });
+
+    result.current.mutate({
+      categoryId: "cat-1",
+      periodKey: "2026-07",
+      limitAmount: 600000,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(
+      queryClient.getQueryState(["dashboard", "summary"])?.isInvalidated
+    ).toBe(true);
   });
 
   it("surfaces the API's error message on a failed mutation", async () => {

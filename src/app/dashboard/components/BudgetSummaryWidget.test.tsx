@@ -71,6 +71,31 @@ describe("BudgetSummaryWidget", () => {
     expect(screen.getByText(/450\.000/)).toBeInTheDocument();
   });
 
+  it("shows a neutral placeholder, not 'eliminada', while categories are still loading", () => {
+    vi.mocked(useCategories).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as never);
+    mockSummary({
+      data: {
+        balances: [],
+        topBudgets: [
+          {
+            _id: "budget-1",
+            categoryId: "cat-1",
+            limitAmount: 600000,
+            currency: "COP",
+            spentAmount: 450000,
+            percentUsed: 75,
+          },
+        ],
+      },
+    });
+    render(<BudgetSummaryWidget />);
+    expect(screen.queryByText("Categoría eliminada")).not.toBeInTheDocument();
+    expect(screen.getByText("…")).toBeInTheDocument();
+  });
+
   it("links to the full budgets page", () => {
     vi.mocked(useCategories).mockReturnValue({ data: [] } as never);
     mockSummary({ data: { balances: [], topBudgets: [] } });

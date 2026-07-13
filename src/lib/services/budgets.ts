@@ -10,15 +10,21 @@ export interface PeriodRange {
 
 /**
  * `periodEnd` is exclusive (first day of the *next* month) so callers can
- * use a plain `$gte periodStart, $lt periodEnd` range — `new Date(year, 12, 1)`
+ * use a plain `$gte periodStart, $lt periodEnd` range — `Date.UTC(year, 12, 1)`
  * correctly rolls over to January of the following year, no special-casing
  * December.
+ *
+ * UTC, not local time: `Transaction.date` is always created from a date-only
+ * string (`new Date("YYYY-MM-DD")`), which the JS spec parses as UTC midnight
+ * regardless of runtime timezone — these boundaries must use the same basis
+ * or `$gte`/`$lt` filtering against `Transaction.date` silently drifts by
+ * however many hours the server's local timezone is offset from UTC.
  */
 export function periodRange(periodKey: string): PeriodRange {
   const [year, month] = periodKey.split("-").map(Number);
   return {
-    periodStart: new Date(year, month - 1, 1),
-    periodEnd: new Date(year, month, 1),
+    periodStart: new Date(Date.UTC(year, month - 1, 1)),
+    periodEnd: new Date(Date.UTC(year, month, 1)),
   };
 }
 

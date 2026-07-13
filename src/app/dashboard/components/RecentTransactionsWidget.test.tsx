@@ -76,6 +76,22 @@ describe("RecentTransactionsWidget", () => {
     expect(screen.getByText(/-\$\s?50\.000/)).toBeInTheDocument();
   });
 
+  it("shows a neutral placeholder, not 'eliminada', while categories/accounts are still loading", () => {
+    vi.mocked(useAccounts).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as never);
+    vi.mocked(useCategories).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as never);
+    mockTransactionsResult({ data: [baseTransaction] });
+    const { container } = render(<RecentTransactionsWidget />);
+    expect(screen.queryByText(/eliminada/i)).not.toBeInTheDocument();
+    // One placeholder for the category name, one for the account name.
+    expect(container.textContent?.match(/…/g)).toHaveLength(2);
+  });
+
   it("links to the full transactions page", () => {
     mockTransactionsResult({ data: [] });
     render(<RecentTransactionsWidget />);

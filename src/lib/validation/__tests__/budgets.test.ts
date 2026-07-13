@@ -29,6 +29,24 @@ describe("createBudgetSchema", () => {
     ).toBe(false);
   });
 
+  it("rejects a periodKey with an out-of-range month", () => {
+    expect(
+      createBudgetSchema.safeParse({ ...valid, periodKey: "2026-13" }).success
+    ).toBe(false);
+    expect(
+      createBudgetSchema.safeParse({ ...valid, periodKey: "2026-00" }).success
+    ).toBe(false);
+  });
+
+  it("accepts the boundary months 01 and 12", () => {
+    expect(
+      createBudgetSchema.safeParse({ ...valid, periodKey: "2026-01" }).success
+    ).toBe(true);
+    expect(
+      createBudgetSchema.safeParse({ ...valid, periodKey: "2026-12" }).success
+    ).toBe(true);
+  });
+
   it("rejects a non-positive limitAmount", () => {
     expect(
       createBudgetSchema.safeParse({ ...valid, limitAmount: 0 }).success

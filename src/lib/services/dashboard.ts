@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Account from "@/lib/models/Account";
 import Transaction, { type ITransaction } from "@/lib/models/Transaction";
 import { getBudgetProgress, periodRange, type BudgetProgress } from "@/lib/services/budgets";
+import { getCurrentPeriodKey, getLastPeriodKeys } from "@/lib/period";
 
 export interface BalanceByCurrency {
   currency: string;
@@ -35,25 +36,13 @@ export interface MonthlyTrendEntry {
   expense: number;
 }
 
-function lastPeriodKeys(months: number): string[] {
-  const now = new Date();
-  const keys: string[] = [];
-  for (let i = months - 1; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    keys.push(
-      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
-    );
-  }
-  return keys;
-}
-
 export async function getMonthlyTrend(
   userId: string,
   months = 6
 ): Promise<MonthlyTrendEntry[]> {
   await connectDB();
 
-  const periodKeys = lastPeriodKeys(months);
+  const periodKeys = getLastPeriodKeys(months);
   const since = periodRange(periodKeys[0]).periodStart;
 
   const results = await Transaction.aggregate<{
@@ -153,16 +142,11 @@ export async function getRecentTransactions(
     .limit(limit);
 }
 
-function currentPeriodKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export async function getTopBudgets(
   userId: string,
   limit = 5
 ): Promise<BudgetProgress[]> {
-  const progress = await getBudgetProgress(userId, currentPeriodKey());
+  const progress = await getBudgetProgress(userId, getCurrentPeriodKey());
   return [...progress]
     .sort((a, b) => b.percentUsed - a.percentUsed)
     .slice(0, limit);

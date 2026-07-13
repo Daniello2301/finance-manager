@@ -3,19 +3,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MonthSelector, shiftPeriod } from "@/components/MonthSelector";
+import { getCurrentPeriodKey } from "@/lib/period";
 import { useBudgetModalStore } from "@/stores/budgetModal.store";
 import { useCopyBudgets } from "@/hooks/useBudgets";
 import { notifyError, notifySuccess } from "@/lib/notifications";
 import { BudgetForm } from "./components/BudgetForm";
 import { BudgetList } from "./components/BudgetList";
 
-function currentPeriod(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export default function BudgetsPage() {
-  const [period, setPeriod] = useState(currentPeriod);
+  const [period, setPeriod] = useState(getCurrentPeriodKey);
   const openCreate = useBudgetModalStore((state) => state.openCreate);
   const copyBudgets = useCopyBudgets();
 

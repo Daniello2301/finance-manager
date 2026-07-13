@@ -47,6 +47,12 @@ describe("categoryBreakdownQuerySchema", () => {
       categoryBreakdownQuerySchema.safeParse({ period: "July" }).success
     ).toBe(false);
   });
+
+  it("rejects a period with an out-of-range month", () => {
+    expect(
+      categoryBreakdownQuerySchema.safeParse({ period: "2026-13" }).success
+    ).toBe(false);
+  });
 });
 
 describe("recentTransactionsQuerySchema", () => {

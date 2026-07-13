@@ -18,20 +18,20 @@ import {
 describe("periodRange", () => {
   it("computes the start and exclusive end of a mid-year month", () => {
     const { periodStart, periodEnd } = periodRange("2026-07");
-    expect(periodStart).toEqual(new Date(2026, 6, 1));
-    expect(periodEnd).toEqual(new Date(2026, 7, 1));
+    expect(periodStart).toEqual(new Date(Date.UTC(2026, 6, 1)));
+    expect(periodEnd).toEqual(new Date(Date.UTC(2026, 7, 1)));
   });
 
   it("rolls over into January of the next year for December", () => {
     const { periodStart, periodEnd } = periodRange("2026-12");
-    expect(periodStart).toEqual(new Date(2026, 11, 1));
-    expect(periodEnd).toEqual(new Date(2027, 0, 1));
+    expect(periodStart).toEqual(new Date(Date.UTC(2026, 11, 1)));
+    expect(periodEnd).toEqual(new Date(Date.UTC(2027, 0, 1)));
   });
 
   it("handles the first month of the year", () => {
     const { periodStart, periodEnd } = periodRange("2026-01");
-    expect(periodStart).toEqual(new Date(2026, 0, 1));
-    expect(periodEnd).toEqual(new Date(2026, 1, 1));
+    expect(periodStart).toEqual(new Date(Date.UTC(2026, 0, 1)));
+    expect(periodEnd).toEqual(new Date(Date.UTC(2026, 1, 1)));
   });
 });
 

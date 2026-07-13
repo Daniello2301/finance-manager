@@ -34,6 +34,19 @@ function createWrapper() {
   };
 }
 
+function createWrapperWithClient() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return { Wrapper, queryClient };
+}
+
 describe("useAccounts hooks", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -156,6 +169,30 @@ describe("useAccounts hooks", () => {
       "/api/accounts/1/recompute-balance",
       expect.objectContaining({ method: "POST" })
     );
+  });
+
+  it("useRecomputeBalance also invalidates the dashboard summary query", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, { account: { _id: "1", currentBalance: 120000 } })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { Wrapper, queryClient } = createWrapperWithClient();
+    queryClient.setQueryData(["dashboard", "summary"], {
+      balances: [],
+      topBudgets: [],
+    });
+
+    const { result } = renderHook(() => useRecomputeBalance(), {
+      wrapper: Wrapper,
+    });
+
+    result.current.mutate("1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(
+      queryClient.getQueryState(["dashboard", "summary"])?.isInvalidated
+    ).toBe(true);
   });
 
   it("surfaces the API's error message on a failed mutation", async () => {

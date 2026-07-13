@@ -1,13 +1,12 @@
 import { z } from "zod";
+import { periodKeySchema } from "@/lib/validation/budgets";
 
 export const trendQuerySchema = z.object({
   months: z.coerce.number().int().min(1).max(24).default(6),
 });
 
 export const categoryBreakdownQuerySchema = z.object({
-  period: z
-    .string()
-    .regex(/^\d{4}-\d{2}$/, "El período debe tener el formato AAAA-MM"),
+  period: periodKeySchema,
 });
 
 export const recentTransactionsQuerySchema = z.object({

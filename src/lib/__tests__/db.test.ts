@@ -3,7 +3,31 @@ import {
   startTestDb,
   stopTestDb,
 } from "@/lib/test-utils/mongoMemoryServer";
-import { connectDB } from "@/lib/db";
+import { connectDB, redactMongoUri } from "@/lib/db";
+
+describe("redactMongoUri", () => {
+  it("strips credentials from a standard connection string", () => {
+    expect(redactMongoUri("failed: mongodb://user:pass@host/db")).toBe(
+      "failed: mongodb://***:***@host/db"
+    );
+  });
+
+  it("strips credentials from an SRV connection string", () => {
+    expect(
+      redactMongoUri(
+        "querySrv ENOTFOUND mongodb+srv://dbUser:s3cr3t@cluster0.mongodb.net/finance"
+      )
+    ).toBe(
+      "querySrv ENOTFOUND mongodb+srv://***:***@cluster0.mongodb.net/finance"
+    );
+  });
+
+  it("leaves a message with no connection string unchanged", () => {
+    expect(redactMongoUri("connect ECONNREFUSED 127.0.0.1:1")).toBe(
+      "connect ECONNREFUSED 127.0.0.1:1"
+    );
+  });
+});
 
 describe("connectDB", () => {
   beforeAll(async () => {
@@ -57,5 +81,16 @@ describe("connectDB", () => {
     process.env.MONGODB_URI = workingUri;
     const conn = await fresh.connectDB();
     expect(conn.connection.readyState).toBe(1);
+  }, 15000);
+
+  it("reconnects when the cached connection has dropped after a prior success", async () => {
+    const first = await connectDB();
+    expect(first.connection.readyState).toBe(1);
+
+    await first.connection.close();
+    expect(first.connection.readyState).not.toBe(1);
+
+    const second = await connectDB();
+    expect(second.connection.readyState).toBe(1);
   }, 15000);
 });

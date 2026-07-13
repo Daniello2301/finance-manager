@@ -8,7 +8,9 @@ import { useDashboardSummary } from "@/hooks/useDashboard";
 
 export function BudgetSummaryWidget() {
   const { data, isLoading, isError } = useDashboardSummary();
-  const { data: categories } = useCategories({ includeArchived: true });
+  const { data: categories, isLoading: categoriesLoading } = useCategories({
+    includeArchived: true,
+  });
 
   return (
     <Card>
@@ -36,9 +38,14 @@ export function BudgetSummaryWidget() {
             </p>
           )}
         {data?.topBudgets.map((budget) => {
-          const categoryName =
-            categories?.find((category) => category._id === budget.categoryId)
-              ?.name ?? "Categoría eliminada";
+          // While categories are still loading, `.find()` would otherwise
+          // resolve to undefined and falsely label a valid category as
+          // deleted for a moment — show a neutral placeholder instead.
+          const categoryName = categoriesLoading
+            ? "…"
+            : (categories?.find(
+                (category) => category._id === budget.categoryId
+              )?.name ?? "Categoría eliminada");
           return (
             <div key={budget._id} className="flex flex-col gap-1">
               <span className="text-sm font-medium">{categoryName}</span>

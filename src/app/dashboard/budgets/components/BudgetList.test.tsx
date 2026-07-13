@@ -98,10 +98,24 @@ describe("BudgetList", () => {
   });
 
   it("falls back to a placeholder when the category no longer exists", () => {
-    vi.mocked(useCategories).mockReturnValue({ data: [] } as never);
+    vi.mocked(useCategories).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never);
     mockBudgetsResult({ data: [baseBudget] });
     render(<BudgetList period="2026-07" />);
     expect(screen.getByText("Categoría eliminada")).toBeInTheDocument();
+  });
+
+  it("shows a neutral placeholder, not 'eliminada', while categories are still loading", () => {
+    vi.mocked(useCategories).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as never);
+    mockBudgetsResult({ data: [baseBudget] });
+    render(<BudgetList period="2026-07" />);
+    expect(screen.queryByText("Categoría eliminada")).not.toBeInTheDocument();
+    expect(screen.getByText("…")).toBeInTheDocument();
   });
 
   it("calls openEdit with the budget id when Editar is clicked", async () => {

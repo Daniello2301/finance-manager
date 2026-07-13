@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -103,33 +104,40 @@ export function Sidebar() {
         </Button>
       </header>
 
-      {/* Mobile overlay drawer */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-foreground/20 backdrop-blur-[1px]"
-            onClick={() => setIsOpen(false)}
-          />
-          <aside className="relative flex h-full w-64 flex-col gap-6 border-r border-border bg-card py-6">
+      {/* Mobile drawer — reuses the shared Dialog primitive (base-ui) for
+          focus trapping, Escape-to-close, and aria-modal semantics, rather
+          than a hand-rolled overlay that a keyboard/screen-reader user could
+          tab straight through into the page behind it. */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="top-0 left-0 h-full w-64 max-w-[80vw] translate-x-0 translate-y-0 gap-0 rounded-none border-r border-border p-0 sm:max-w-[80vw] md:hidden"
+        >
+          <div className="flex h-full flex-col gap-6 py-6">
             <div className="flex items-center justify-between px-4">
-              <span className="font-display text-lg font-semibold">
+              <DialogTitle className="font-display text-lg font-semibold">
                 Finanzas Personales
-              </span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Cerrar menú"
-                onClick={() => setIsOpen(false)}
+              </DialogTitle>
+              <DialogClose
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Cerrar menú"
+                  />
+                }
               >
                 <X className="size-5" />
-              </Button>
+              </DialogClose>
             </div>
-            <SidebarNav pathname={pathname} onNavigate={() => setIsOpen(false)} />
+            <SidebarNav
+              pathname={pathname}
+              onNavigate={() => setIsOpen(false)}
+            />
             <SidebarFooter name={session?.user?.name} />
-          </aside>
-        </div>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 border-r border-border bg-card py-6 md:flex">

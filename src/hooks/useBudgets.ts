@@ -56,6 +56,10 @@ export function useCreateBudget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      // Budgets feed the dashboard's balance/top-budgets summary too — an
+      // edit here that doesn't refresh that cache would show stale data on
+      // /dashboard for up to its staleTime window.
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -80,6 +84,10 @@ export function useUpdateBudget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      // Budgets feed the dashboard's balance/top-budgets summary too — an
+      // edit here that doesn't refresh that cache would show stale data on
+      // /dashboard for up to its staleTime window.
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -93,6 +101,10 @@ export function useDeleteBudget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      // Budgets feed the dashboard's balance/top-budgets summary too — an
+      // edit here that doesn't refresh that cache would show stale data on
+      // /dashboard for up to its staleTime window.
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -117,6 +129,10 @@ export function useCopyBudgets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      // Budgets feed the dashboard's balance/top-budgets summary too — an
+      // edit here that doesn't refresh that cache would show stale data on
+      // /dashboard for up to its staleTime window.
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

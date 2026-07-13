@@ -9,8 +9,10 @@ import { useRecentTransactions } from "@/hooks/useDashboard";
 
 export function RecentTransactionsWidget() {
   const { data: transactions, isLoading, isError } = useRecentTransactions(5);
-  const { data: accounts } = useAccounts(true);
-  const { data: categories } = useCategories({ includeArchived: true });
+  const { data: accounts, isLoading: accountsLoading } = useAccounts(true);
+  const { data: categories, isLoading: categoriesLoading } = useCategories({
+    includeArchived: true,
+  });
 
   return (
     <Card>
@@ -36,13 +38,19 @@ export function RecentTransactionsWidget() {
           </p>
         )}
         {transactions?.map((transaction) => {
-          const categoryName =
-            categories?.find(
-              (category) => category._id === transaction.categoryId
-            )?.name ?? "Categoría eliminada";
-          const accountName =
-            accounts?.find((account) => account._id === transaction.accountId)
-              ?.name ?? "Cuenta eliminada";
+          // While categories/accounts are still loading, `.find()` would
+          // otherwise resolve to undefined and falsely label valid
+          // categories/accounts as deleted for a moment.
+          const categoryName = categoriesLoading
+            ? "…"
+            : (categories?.find(
+                (category) => category._id === transaction.categoryId
+              )?.name ?? "Categoría eliminada");
+          const accountName = accountsLoading
+            ? "…"
+            : (accounts?.find(
+                (account) => account._id === transaction.accountId
+              )?.name ?? "Cuenta eliminada");
           const isIncome = transaction.type === "income";
 
           return (
