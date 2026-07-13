@@ -79,7 +79,7 @@ Esta fase va primero a propósito. Es la única parte del módulo con riesgo rea
 | [T551] | [US7] `DebtSummaryWidget.tsx` + componer en `src/app/dashboard/page.tsx` | 0.4d | - | [T550] | | ✅ |
 | [T552] | Cobertura ≥80% verificada (Principio 3) | 0.2d | - | [T551] | | ✅ |
 | [T553] | `type-check` + `lint` + `build` limpios | 0.2d | - | [T552] | | ✅ |
-| [T554] | Verificación end-to-end contra producción con los números reales del dueño | 0.3d | - | [T553] | | ⬜ |
+| [T554] | Verificación end-to-end contra producción con los números reales del dueño | 0.3d | - | [T553] | | ✅ |
 
 ---
 
