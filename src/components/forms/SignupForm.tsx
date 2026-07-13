@@ -7,8 +7,10 @@ import { signIn } from "next-auth/react";
 import { signupSchema, type SignupInput } from "@/lib/validation/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PasswordChecklist } from "@/components/forms/PasswordChecklist";
 
 const SIGNUP_FIELDS = ["name", "email", "password", "confirmPassword"] as const;
 
@@ -17,10 +19,14 @@ export function SignupForm() {
   const {
     register,
     handleSubmit,
-    resetField,
+    watch,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
+
+  // Drives the live checklist. The rules used to be revealed one failed submit
+  // at a time; now they tick off as you type.
+  const password = watch("password") ?? "";
 
   const onSubmit = async (data: SignupInput) => {
     try {
@@ -42,8 +48,6 @@ export function SignupForm() {
             message:
               "Tu cuenta se creó, pero no pudimos iniciar sesión automáticamente. Intenta ingresar manualmente.",
           });
-          resetField("password");
-          resetField("confirmPassword");
           return;
         }
 
@@ -69,16 +73,15 @@ export function SignupForm() {
       } else {
         setError("root", { message: "Ocurrió un error. Intenta de nuevo." });
       }
-
-      resetField("password");
-      resetField("confirmPassword");
     } catch {
       setError("root", {
         message: "No se pudo conectar con el servidor. Intenta de nuevo.",
       });
-      resetField("password");
-      resetField("confirmPassword");
     }
+    // Deliberately no resetField() on the password fields. It used to run on
+    // every failure path, so an "email already registered" 409 — which has
+    // nothing to do with the password — wiped what the user had typed and made
+    // them enter it again.
   };
 
   return (
@@ -116,13 +119,15 @@ export function SignupForm() {
 
         <Field data-invalid={!!errors.password}>
           <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             aria-invalid={!!errors.password}
             {...register("password")}
           />
+          <PasswordChecklist value={password} />
+          {/* The checklist covers the client-side rules; this only ever shows a
+              password error the server sent back. */}
           <FieldError errors={[errors.password]} />
         </Field>
 
@@ -130,9 +135,8 @@ export function SignupForm() {
           <FieldLabel htmlFor="confirmPassword">
             Confirmar contraseña
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             autoComplete="new-password"
             aria-invalid={!!errors.confirmPassword}
             {...register("confirmPassword")}

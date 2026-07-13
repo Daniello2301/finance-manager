@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { parseJsonOrThrow } from "@/lib/api-client";
 import type {
   CreateAccountInput,
   UpdateAccountInput,
@@ -20,14 +21,6 @@ export interface Account {
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-async function parseJsonOrThrow(res: Response) {
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body.error ?? "Ocurrió un error inesperado");
-  }
-  return body;
 }
 
 export function useAccounts(includeArchived = false) {
@@ -95,6 +88,26 @@ export function useArchiveAccount() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+  });
+}
+
+export function useUnarchiveAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<Account> => {
+      const res = await fetch(`/api/accounts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: false }),
+      });
+      const body = await parseJsonOrThrow(res);
+      return body.account;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      // An unarchived account is counted in the balance summary again.
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

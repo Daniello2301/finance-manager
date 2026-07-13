@@ -44,7 +44,7 @@ describe("transactions service", () => {
     await stopTestReplSet();
   }, 30000);
 
-  async function seedAccount(currentBalance = 0, currency = "COP") {
+  async function seedAccount(currentBalance = 1_000_000, currency = "COP") {
     return Account.create({
       userId,
       name: "Cuenta",
@@ -96,7 +96,7 @@ describe("transactions service", () => {
     });
 
     it("inherits currency from the account, ignoring anything else", async () => {
-      const account = await seedAccount(0, "COP");
+      const account = await seedAccount(1_000_000, "COP");
       const category = await seedCategory();
 
       const tx = await createTransaction(userId, {

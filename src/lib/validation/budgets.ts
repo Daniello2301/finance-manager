@@ -1,9 +1,5 @@
 import { z } from "zod";
-
-// Plain regex, not mongoose.Types.ObjectId.isValid — this schema is also
-// imported by BudgetForm.tsx (a client component), and mongoose pulls in
-// Node builtins (fs/net/tls/dns) that break the browser bundle.
-const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "ID inválido");
+import { objectIdSchema } from "@/lib/validation/common";
 
 // The regex alone only checks shape — it accepts "2026-13". periodRange()
 // (src/lib/services/budgets.ts) rolls an out-of-range month over via native

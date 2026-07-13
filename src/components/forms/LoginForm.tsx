@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -87,9 +88,8 @@ export function LoginForm() {
 
         <Field data-invalid={!!errors.password}>
           <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             aria-invalid={!!errors.password}
             {...register("password")}

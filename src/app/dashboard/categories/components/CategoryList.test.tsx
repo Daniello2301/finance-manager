@@ -7,6 +7,7 @@ import { useArchiveCategory, useCategories } from "@/hooks/useCategories";
 vi.mock("@/hooks/useCategories", () => ({
   useCategories: vi.fn(),
   useArchiveCategory: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUnarchiveCategory: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
 vi.mock("@/stores/categoryModal.store", () => ({
@@ -29,7 +30,7 @@ describe("CategoryList", () => {
     mockQueryResult({ isLoading: true });
     render(<CategoryList />);
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
-    expect(useCategories).toHaveBeenCalledWith({ type: "expense" });
+    expect(useCategories).toHaveBeenCalledWith({ type: "expense", includeArchived: false });
   });
 
   it("shows an error message", () => {
@@ -62,7 +63,7 @@ describe("CategoryList", () => {
     render(<CategoryList />);
 
     await user.click(screen.getByRole("button", { name: /ingresos/i }));
-    expect(useCategories).toHaveBeenCalledWith({ type: "income" });
+    expect(useCategories).toHaveBeenCalledWith({ type: "income", includeArchived: false });
   });
 
   it("calls the archive mutation with the category id", async () => {

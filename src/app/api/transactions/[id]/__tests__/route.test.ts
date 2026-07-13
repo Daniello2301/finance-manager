@@ -64,7 +64,7 @@ describe("/api/transactions/[id]", () => {
     await stopTestReplSet();
   }, 30000);
 
-  async function seedAccount(userIdForAccount = userId, currentBalance = 0) {
+  async function seedAccount(userIdForAccount = userId, currentBalance = 1_000_000) {
     return Account.create({
       userId: userIdForAccount,
       name: "Cuenta",

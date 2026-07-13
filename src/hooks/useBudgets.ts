@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { parseJsonOrThrow } from "@/lib/api-client";
 import type {
   CreateBudgetInput,
   UpdateBudgetInput,
@@ -18,14 +19,6 @@ export interface Budget {
   percentUsed: number;
   createdAt: string;
   updatedAt: string;
-}
-
-async function parseJsonOrThrow(res: Response) {
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body.error ?? "Ocurrió un error inesperado");
-  }
-  return body;
 }
 
 export function useBudgets(period: string) {

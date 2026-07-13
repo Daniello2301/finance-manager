@@ -19,8 +19,21 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
+  // Needed for the OG image to resolve to an absolute URL — without it Next
+  // warns and social platforms get a relative path they can't fetch.
+  metadataBase: new URL(
+    process.env.NEXTAUTH_URL ?? "http://localhost:3000"
+  ),
   title: "Finanzas Personales",
   description: "Gestiona tus cuentas, presupuestos y gastos en un solo lugar.",
+  applicationName: "Finanzas Personales",
+  openGraph: {
+    title: "Finanzas Personales",
+    description:
+      "Gestiona tus cuentas, presupuestos y gastos en un solo lugar.",
+    type: "website",
+    locale: "es_CO",
+  },
 };
 
 export const viewport: Viewport = {

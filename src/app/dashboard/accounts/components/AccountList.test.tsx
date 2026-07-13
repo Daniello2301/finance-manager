@@ -6,6 +6,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 vi.mock("@/hooks/useAccounts", () => ({
   useAccounts: vi.fn(),
   useArchiveAccount: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUnarchiveAccount: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useRecomputeBalance: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 

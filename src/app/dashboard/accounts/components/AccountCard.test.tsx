@@ -5,12 +5,14 @@ import { AccountCard } from "@/app/dashboard/accounts/components/AccountCard";
 import {
   useArchiveAccount,
   useRecomputeBalance,
+  useUnarchiveAccount,
   type Account,
 } from "@/hooks/useAccounts";
 import { useAccountModalStore } from "@/stores/accountModal.store";
 
 vi.mock("@/hooks/useAccounts", () => ({
   useArchiveAccount: vi.fn(),
+  useUnarchiveAccount: vi.fn(),
   useRecomputeBalance: vi.fn(),
 }));
 
@@ -34,6 +36,7 @@ const baseAccount: Account = {
 describe("AccountCard", () => {
   const openEdit = vi.fn();
   const mutate = vi.fn();
+  const unarchiveMutate = vi.fn();
   const recomputeMutate = vi.fn();
 
   beforeEach(() => {
@@ -45,10 +48,40 @@ describe("AccountCard", () => {
       mutate,
       isPending: false,
     } as never);
+    vi.mocked(useUnarchiveAccount).mockReturnValue({
+      mutate: unarchiveMutate,
+      isPending: false,
+    } as never);
     vi.mocked(useRecomputeBalance).mockReturnValue({
       mutate: recomputeMutate,
       isPending: false,
     } as never);
+  });
+
+  // Archiving used to be a one-way trip: the update schema silently dropped
+  // `isArchived`, so the API answered 200 and changed nothing.
+  describe("when the account is archived", () => {
+    const archived: Account = { ...baseAccount, isArchived: true };
+
+    it("offers the way back and hides the actions that no longer apply", () => {
+      render(<AccountCard account={archived} />);
+      expect(
+        screen.getByRole("button", { name: /desarchivar/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^editar$/i })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^archivar$/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("unarchives the account when Desarchivar is clicked", async () => {
+      const user = userEvent.setup();
+      render(<AccountCard account={archived} />);
+      await user.click(screen.getByRole("button", { name: /desarchivar/i }));
+      expect(unarchiveMutate).toHaveBeenCalledWith("1");
+    });
   });
 
   it("shows the account name, type, and formatted balance", () => {

@@ -23,9 +23,16 @@ export const createAccountSchema = baseAccountSchema.refine(
 // No .refine() here: on a partial update, a payload of just { creditLimit }
 // has no `type` for Zod to check against — only the route (which has the
 // stored account) can validate creditLimit against the *effective* type.
+//
+// `isArchived` is only on the UPDATE schema, never on create (an account can't
+// be born archived). It has to be here explicitly: Zod strips unknown keys
+// silently, so before this line a PATCH of `{ isArchived: false }` parsed to
+// `{}` — the API answered 200 and changed nothing, which made archiving a
+// one-way trip with no error to explain why.
 export const updateAccountSchema = baseAccountSchema
   .partial()
-  .omit({ currency: true });
+  .omit({ currency: true })
+  .extend({ isArchived: z.boolean().optional() });
 
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;
 export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;

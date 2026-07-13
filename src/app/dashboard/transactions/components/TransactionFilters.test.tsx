@@ -89,9 +89,36 @@ describe("TransactionFilters", () => {
   });
 
   it("calls clearFilters when 'Limpiar filtros' is clicked", async () => {
+    // Needs a filter set: with nothing to clear the button is disabled.
+    mockFiltersStore({ accountId: "acc-1" });
     const user = userEvent.setup();
     render(<TransactionFilters />);
     await user.click(screen.getByRole("button", { name: /limpiar filtros/i }));
     expect(clearFilters).toHaveBeenCalled();
+  });
+
+  it("disables 'Limpiar filtros' when there is nothing to clear", () => {
+    render(<TransactionFilters />);
+    expect(
+      screen.getByRole("button", { name: /limpiar filtros/i })
+    ).toBeDisabled();
+  });
+
+  // The filters used to be five full-width cells stacked ~390px tall — on a
+  // phone they filled the screen and pushed every transaction below the fold.
+  it("shows how many filters are active on the collapsed mobile toggle", () => {
+    mockFiltersStore({ accountId: "acc-1", type: "expense" });
+    render(<TransactionFilters />);
+    const toggle = screen.getByRole("button", { name: /^filtros/i });
+    expect(toggle).toHaveTextContent("2");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("expands the filters when the toggle is pressed", async () => {
+    const user = userEvent.setup();
+    render(<TransactionFilters />);
+    const toggle = screen.getByRole("button", { name: /^filtros/i });
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 });

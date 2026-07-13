@@ -128,12 +128,16 @@ describe("transactions service — end-to-end balance invariant", () => {
       amount: 1000000,
       date: new Date(),
     });
+    // Deliberately overdraws B: the negative balance is the point, since it's
+    // what proves the delta landed on B and not on A. Now that expenses past the
+    // available balance need confirming, that intent has to be stated.
     const tx2 = await createTransaction(userId, {
       accountId: accountB.id,
       categoryId: expense.id,
       type: "expense",
       amount: 200000,
       date: new Date(),
+      confirmOverdraft: true,
     });
 
     expect((await Account.findById(accountA.id))!.currentBalance).toBe(

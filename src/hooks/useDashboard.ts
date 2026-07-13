@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { parseJsonOrThrow } from "@/lib/api-client";
 import type { Budget } from "@/hooks/useBudgets";
 import type { Transaction } from "@/hooks/useTransactions";
 
@@ -24,14 +25,6 @@ export interface CategoryBreakdownEntry {
   categoryId: string;
   categoryName: string;
   total: number;
-}
-
-async function parseJsonOrThrow(res: Response) {
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body.error ?? "Ocurrió un error inesperado");
-  }
-  return body;
 }
 
 const STALE_TIME_MS = 60000;

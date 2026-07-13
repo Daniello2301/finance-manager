@@ -1,14 +1,9 @@
 import { z } from "zod";
+import { objectIdSchema } from "@/lib/validation/common";
 
-// A malformed accountId/categoryId would otherwise reach Mongoose as a
-// query filter and throw an unhandled CastError (500) instead of a clean
-// 422 — validated here before any query runs. A plain regex (rather than
-// mongoose.Types.ObjectId.isValid) keeps this schema safe to import from
-// client components — mongoose itself depends on Node builtins (fs, net,
-// tls...) that break the browser bundle.
-const objectIdSchema = z
-  .string()
-  .regex(/^[0-9a-fA-F]{24}$/, "ID inválido");
+// The user has been shown their real available balance and chosen to go ahead
+// anyway. A per-request decision, never persisted on the transaction.
+const confirmOverdraftSchema = z.boolean().optional();
 
 const baseTransactionSchema = z.object({
   accountId: objectIdSchema,
@@ -19,12 +14,16 @@ const baseTransactionSchema = z.object({
   description: z.string().max(200).optional(),
 });
 
-export const createTransactionSchema = baseTransactionSchema;
+export const createTransactionSchema = baseTransactionSchema.extend({
+  confirmOverdraft: confirmOverdraftSchema,
+});
 
 // No .refine() and no .omit() needed — unlike Accounts' creditLimit rule
 // or Categories' immutable `type`, Transaction has no cross-field rule
 // and no field that must be rejected-not-stripped in a PATCH body.
-export const updateTransactionSchema = baseTransactionSchema.partial();
+export const updateTransactionSchema = baseTransactionSchema.partial().extend({
+  confirmOverdraft: confirmOverdraftSchema,
+});
 
 export const listTransactionsQuerySchema = z.object({
   accountId: objectIdSchema.optional(),

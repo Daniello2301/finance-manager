@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { requireSession } from "@/lib/api-auth";
+import { parseObjectIdParam } from "@/lib/validation/common";
 import { errorResponse, NotFoundError } from "@/lib/errors";
 import { connectDB } from "@/lib/db";
 import Account from "@/lib/models/Account";
@@ -14,7 +15,8 @@ interface RouteParams {
 export async function POST(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSession();
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const id = parseObjectIdParam(rawId);
     await connectDB();
 
     const dbSession = await mongoose.startSession();

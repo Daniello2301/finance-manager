@@ -20,7 +20,9 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AccountSelect } from "@/components/AccountSelect";
 import { CategorySelect } from "@/components/CategorySelect";
-import { fromMinorUnits, toMinorUnits } from "@/lib/money";
+import { formatMoney, fromMinorUnits, toMinorUnits } from "@/lib/money";
+import { isInsufficientFunds } from "@/lib/api-client";
+import { confirmAction } from "@/lib/notifications";
 import {
   createTransactionSchema,
   updateTransactionSchema,
@@ -118,26 +120,56 @@ export function TransactionForm() {
   };
 
   const onSubmit = async (values: TransactionFormValues) => {
-    try {
-      const input = {
-        accountId: values.accountId,
-        categoryId: values.categoryId,
-        type: values.type,
-        amount: toMinorUnits(values.amount, "COP"),
-        date: new Date(values.date),
-        description: values.description || undefined,
-      };
+    const input = {
+      accountId: values.accountId,
+      categoryId: values.categoryId,
+      type: values.type,
+      amount: toMinorUnits(values.amount, "COP"),
+      date: new Date(values.date),
+      description: values.description || undefined,
+    };
 
-      if (isEditing && editingTransactionId) {
-        await updateTransaction.mutateAsync({
-          id: editingTransactionId,
-          input,
-        });
-      } else {
-        await createTransaction.mutateAsync(input);
-      }
+    const submit = (confirmOverdraft?: boolean) =>
+      isEditing && editingTransactionId
+        ? updateTransaction.mutateAsync({
+            id: editingTransactionId,
+            input: { ...input, confirmOverdraft },
+          })
+        : createTransaction.mutateAsync({ ...input, confirmOverdraft });
+
+    try {
+      await submit();
       close();
     } catch (error) {
+      // The server is the authority on the balance — the cached one here can be
+      // stale. So we don't pre-check: we let the write be rejected, then quote
+      // the figure the server sent back and offer to go ahead anyway.
+      if (isInsufficientFunds(error)) {
+        const confirmed = await confirmAction({
+          title: "Saldo insuficiente",
+          text: `Esta cuenta solo tiene ${formatMoney(
+            error.body.available,
+            error.body.currency
+          )} disponible. ¿Registrar la transacción de todos modos?`,
+          confirmButtonText: "Sí, registrarla",
+        });
+        if (!confirmed) return;
+
+        try {
+          await submit(true);
+          close();
+          return;
+        } catch (retryError) {
+          setError("root", {
+            message:
+              retryError instanceof Error
+                ? retryError.message
+                : "Ocurrió un error. Intenta de nuevo.",
+          });
+          return;
+        }
+      }
+
       setError("root", {
         message:
           error instanceof Error

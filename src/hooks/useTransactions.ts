@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { parseJsonOrThrow } from "@/lib/api-client";
 import type {
   CreateTransactionInput,
   UpdateTransactionInput,
@@ -40,14 +41,6 @@ export interface TransactionFilters {
   dateTo?: string;
   page?: number;
   limit?: number;
-}
-
-async function parseJsonOrThrow(res: Response) {
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body.error ?? "Ocurrió un error inesperado");
-  }
-  return body;
 }
 
 function buildQuery(filters: TransactionFilters): string {

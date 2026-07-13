@@ -13,9 +13,14 @@ export const createCategorySchema = baseCategorySchema;
 // rule for categories. `type` is simply omitted (immutable after create;
 // the route rejects a `type` key in the raw body explicitly, see
 // src/app/api/categories/[id]/route.ts).
+//
+// `isArchived` is update-only (a category can't be born archived) and must be
+// declared explicitly — Zod strips unknown keys silently, so a PATCH of
+// `{ isArchived: false }` used to parse to `{}`: 200 OK, nothing changed.
 export const updateCategorySchema = baseCategorySchema
   .omit({ type: true })
-  .partial();
+  .partial()
+  .extend({ isArchived: z.boolean().optional() });
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;

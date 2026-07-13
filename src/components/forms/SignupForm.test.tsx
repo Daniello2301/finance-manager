@@ -147,7 +147,10 @@ describe("SignupForm", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the duplicate-email error and clears the password fields on 409", async () => {
+  // The form used to resetField() both password fields on every server-error
+  // path. A 409 has nothing to do with the password, so it wiped a perfectly
+  // good one and made the user type it again just to change their email.
+  it("shows the duplicate-email error and KEEPS what the user typed on 409", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse(409, { error: "El correo electrónico ya está en uso" })
     );
@@ -160,8 +163,12 @@ describe("SignupForm", () => {
     expect(
       await screen.findByText(/el correo electrónico ya está en uso/i)
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/^contraseña$/i)).toHaveValue("");
-    expect(screen.getByLabelText(/confirmar contraseña/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^contraseña$/i)).toHaveValue(
+      "SecurePass123!"
+    );
+    expect(screen.getByLabelText(/confirmar contraseña/i)).toHaveValue(
+      "SecurePass123!"
+    );
     expect(screen.getByLabelText(/correo electrónico/i)).toHaveValue(
       "ana@example.com"
     );

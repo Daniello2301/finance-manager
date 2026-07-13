@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { parseJsonOrThrow } from "@/lib/api-client";
 import type {
   CreateCategoryInput,
   UpdateCategoryInput,
@@ -22,14 +23,6 @@ export interface Category {
 interface CategoryFilters {
   type?: "income" | "expense";
   includeArchived?: boolean;
-}
-
-async function parseJsonOrThrow(res: Response) {
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body.error ?? "Ocurrió un error inesperado");
-  }
-  return body;
 }
 
 function buildQuery(filters: CategoryFilters): string {
@@ -98,6 +91,24 @@ export function useArchiveCategory() {
   return useMutation({
     mutationFn: async (id: string): Promise<Category> => {
       const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
+      const body = await parseJsonOrThrow(res);
+      return body.category;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+}
+
+export function useUnarchiveCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<Category> => {
+      const res = await fetch(`/api/categories/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: false }),
+      });
       const body = await parseJsonOrThrow(res);
       return body.category;
     },

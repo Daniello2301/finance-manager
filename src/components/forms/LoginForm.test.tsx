@@ -25,7 +25,7 @@ function jsonResponse(status: number, body: unknown) {
 
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/correo electrónico/i), "ana@example.com");
-  await user.type(screen.getByLabelText(/contraseña/i), "SecurePass123!");
+  await user.type(screen.getByLabelText(/^contraseña$/i), "SecurePass123!");
 }
 
 describe("LoginForm", () => {
@@ -44,7 +44,7 @@ describe("LoginForm", () => {
   it("renders email and password fields", () => {
     render(<LoginForm />);
     expect(screen.getByLabelText(/correo electrónico/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/contraseña/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^contraseña$/i)).toBeInTheDocument();
   });
 
   it("shows client-side validation errors without calling fetch", async () => {
@@ -130,7 +130,7 @@ describe("LoginForm", () => {
       "aria-invalid",
       "true"
     );
-    expect(screen.getByLabelText(/contraseña/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^contraseña$/i)).toHaveValue("");
     expect(signIn).not.toHaveBeenCalled();
   });
 
