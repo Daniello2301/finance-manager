@@ -2,6 +2,7 @@
 
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartSkeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/money";
 import { getCurrentPeriodKey } from "@/lib/period";
 import { useCategoryBreakdown } from "@/hooks/useDashboard";
@@ -26,7 +27,7 @@ export function CategoryBreakdownChart() {
         <CardTitle>Gasto por categoría (mes actual)</CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+        {isLoading && <ChartSkeleton />}
         {isError && (
           <p className="text-destructive">
             No se pudo cargar la distribución.
@@ -40,16 +41,20 @@ export function CategoryBreakdownChart() {
         {!isLoading && !isError && data && data.length > 0 && (
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
+              {/* No `label` render-prop: Recharts draws those on leader lines
+                  *outside* outerRadius, so a name like "Entretenimiento 32%"
+                  ran past the SVG viewBox and got sliced mid-word on a phone.
+                  The Legend already names every slice and the Tooltip gives the
+                  exact figure, so the labels were redundant as well as broken.
+                  outerRadius as a percentage lets the pie shrink with the card
+                  instead of staying a fixed 180px. */}
               <Pie
                 data={data}
                 dataKey="total"
                 nameKey="categoryName"
                 cx="50%"
                 cy="50%"
-                outerRadius={90}
-                label={({ name, percent }) =>
-                  `${name} ${Math.round((percent ?? 0) * 100)}%`
-                }
+                outerRadius="70%"
               >
                 {data.map((entry, index) => (
                   <Cell

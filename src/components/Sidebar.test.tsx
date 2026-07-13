@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -126,5 +126,42 @@ describe("Sidebar", () => {
     expect(
       screen.queryByRole("button", { name: /cerrar menú/i })
     ).not.toBeInTheDocument();
+  });
+
+  // A phone rotated to landscape (~844px) crosses the `md` breakpoint, at which
+  // point the drawer's close button and the hamburger are both gone. Before the
+  // fix, the drawer stayed *open* with no way out: backdrop still covering the
+  // screen, body scroll locked, focus trapped. Hiding it with CSS was not enough
+  // — an invisible dialog is still an open dialog. This drives the real media
+  // query rather than asserting on a className.
+  it("closes the mobile drawer when the viewport grows past the desktop breakpoint", async () => {
+    const listeners: Array<() => void> = [];
+    let isDesktop = false;
+    window.matchMedia = ((query: string) => ({
+      get matches() {
+        return isDesktop;
+      },
+      media: query,
+      onchange: null,
+      addEventListener: (_: string, listener: () => void) => {
+        listeners.push(listener);
+      },
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+
+    const user = userEvent.setup();
+    render(<Sidebar />);
+
+    await user.click(screen.getByRole("button", { name: /abrir menú/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // Rotate to landscape.
+    isDesktop = true;
+    act(() => listeners.forEach((listener) => listener()));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

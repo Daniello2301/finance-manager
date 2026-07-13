@@ -51,11 +51,11 @@ function mockQueryResult(overrides: Record<string, unknown>) {
 }
 
 describe("TransactionList", () => {
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     mockFiltersStore();
     mockQueryResult({ isLoading: true });
     render(<TransactionList />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {

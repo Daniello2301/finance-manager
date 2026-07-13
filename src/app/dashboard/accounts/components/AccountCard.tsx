@@ -35,7 +35,7 @@ export function AccountCard({ account }: { account: Account }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{account.name}</CardTitle>
+        <CardTitle className="truncate">{account.name}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
         <p className="text-xs text-muted-foreground">
@@ -50,7 +50,11 @@ export function AccountCard({ account }: { account: Account }) {
           </p>
         )}
       </CardContent>
-      <CardFooter className="flex gap-2">
+      {/* `flex-wrap`: three unshrinkable buttons ("Recalcular saldo" is wide)
+          barely fit a card at 375px, and Card is `overflow-hidden`, so the
+          third one was one font-size bump away from being silently clipped
+          rather than wrapping. */}
+      <CardFooter className="flex flex-wrap gap-2">
         <Button
           variant="outline"
           size="sm"

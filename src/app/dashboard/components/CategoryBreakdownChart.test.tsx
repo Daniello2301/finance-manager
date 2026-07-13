@@ -44,10 +44,10 @@ function mockBreakdownResult(overrides: Record<string, unknown>) {
 }
 
 describe("CategoryBreakdownChart", () => {
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     mockBreakdownResult({ isLoading: true });
     render(<CategoryBreakdownChart />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {

@@ -10,8 +10,8 @@ export default function TransactionsPage() {
   const openCreate = useTransactionModalStore((state) => state.openCreate);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold">Transacciones</h1>
         <Button onClick={openCreate}>Nueva transacción</Button>
       </div>

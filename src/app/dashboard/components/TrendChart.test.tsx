@@ -44,10 +44,10 @@ function mockTrendResult(overrides: Record<string, unknown>) {
 }
 
 describe("TrendChart", () => {
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     mockTrendResult({ isLoading: true });
     render(<TrendChart />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {

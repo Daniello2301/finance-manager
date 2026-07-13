@@ -162,15 +162,21 @@ export function BudgetForm({ period }: { period: string }) {
               <Input
                 id="budget-limit"
                 type="number"
+                inputMode="decimal"
                 aria-invalid={!!errors.limitAmount}
                 {...register("limitAmount", { valueAsNumber: true })}
               />
               <FieldError errors={[errors.limitAmount]} />
             </Field>
 
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Guardar"}
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={close}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
           </FieldGroup>
         </form>
       </DialogContent>

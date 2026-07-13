@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccounts } from "@/hooks/useAccounts";
+import { Select } from "@/components/ui/select";
 
 interface AccountSelectProps {
   value?: string;
@@ -23,12 +24,11 @@ export function AccountSelect({
   const { data: accounts, isLoading } = useAccounts();
 
   return (
-    <select
+    <Select
       id={id}
       value={value ?? ""}
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled || isLoading}
-      className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
     >
       <option value="" disabled>
         {isLoading ? "Cargando cuentas..." : "Selecciona una cuenta"}
@@ -38,6 +38,6 @@ export function AccountSelect({
           {account.name}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

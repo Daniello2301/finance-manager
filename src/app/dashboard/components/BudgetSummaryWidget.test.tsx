@@ -22,11 +22,11 @@ function mockSummary(overrides: Record<string, unknown>) {
 }
 
 describe("BudgetSummaryWidget", () => {
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     vi.mocked(useCategories).mockReturnValue({ data: [] } as never);
     mockSummary({ isLoading: true });
     render(<BudgetSummaryWidget />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {

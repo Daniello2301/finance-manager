@@ -17,10 +17,10 @@ function mockSummary(overrides: Record<string, unknown>) {
 }
 
 describe("BalanceSummaryCard", () => {
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     mockSummary({ isLoading: true });
     render(<BalanceSummaryCard />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {

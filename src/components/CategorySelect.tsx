@@ -1,6 +1,7 @@
 "use client";
 
 import { useCategories } from "@/hooks/useCategories";
+import { Select } from "@/components/ui/select";
 
 interface CategorySelectProps {
   value?: string;
@@ -30,12 +31,11 @@ export function CategorySelect({
   const expense = categories?.filter((c) => c.type === "expense") ?? [];
 
   return (
-    <select
+    <Select
       id={id}
       value={value ?? ""}
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled || isLoading}
-      className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
     >
       <option value="" disabled>
         {isLoading ? "Cargando categorías..." : "Selecciona una categoría"}
@@ -66,6 +66,6 @@ export function CategorySelect({
               </optgroup>
             ),
           ]}
-    </select>
+    </Select>
   );
 }

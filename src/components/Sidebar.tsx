@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -48,7 +48,7 @@ function SidebarNav({
             onClick={onNavigate}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2 font-display text-sm font-medium tracking-wide text-muted-foreground transition-colors",
+              "flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2 font-display text-sm font-medium tracking-wide text-muted-foreground transition-colors md:min-h-0",
               "hover:bg-accent/60 hover:text-accent-foreground",
               isActive && "border-primary bg-accent text-accent-foreground"
             )}
@@ -64,7 +64,10 @@ function SidebarNav({
 
 function SidebarFooter({ name }: { name?: string | null }) {
   return (
-    <div className="flex flex-col gap-2 border-t border-border px-4 pt-4">
+    // pb accounts for the iOS home indicator, which otherwise sits on top of
+    // the logout button (this is the bottom-most element in both the drawer
+    // and the desktop rail).
+    <div className="flex flex-col gap-2 border-t border-border px-4 pt-4 pb-[env(safe-area-inset-bottom)]">
       {name && (
         <span className="truncate text-sm text-foreground">{name}</span>
       )}
@@ -84,10 +87,26 @@ export function Sidebar() {
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
 
+  // A phone rotated to landscape is ~844px wide — past the `md` breakpoint at
+  // which the drawer's trigger and close button disappear and the desktop rail
+  // takes over. Without this, rotating with the drawer open left it *open* but
+  // with no way to dismiss it: the backdrop kept covering the screen, body
+  // scroll stayed locked, and focus stayed trapped inside. Closing on the
+  // breakpoint crossing is the fix; hiding the drawer with `md:hidden` is not,
+  // because a hidden dialog is still an open one.
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const close = () => desktop.matches && setIsOpen(false);
+    close();
+    desktop.addEventListener("change", close);
+    return () => desktop.removeEventListener("change", close);
+  }, []);
+
   return (
     <>
-      {/* Mobile top bar */}
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 md:hidden">
+      {/* Mobile top bar — sticky so the only nav entry point on a phone doesn't
+          scroll away, and padded for the status bar / notch. */}
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden">
         <Link
           href="/dashboard"
           className="font-display text-lg font-semibold"
@@ -111,7 +130,7 @@ export function Sidebar() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
           showCloseButton={false}
-          className="top-0 left-0 h-full w-64 max-w-[80vw] translate-x-0 translate-y-0 gap-0 rounded-none border-r border-border p-0 sm:max-w-[80vw] md:hidden"
+          className="top-0 left-0 h-dvh max-h-none w-64 max-w-[80vw] translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-r border-border p-0 pl-[env(safe-area-inset-left)] sm:max-w-[80vw]"
         >
           <div className="flex h-full flex-col gap-6 py-6">
             <div className="flex items-center justify-between px-4">
@@ -140,7 +159,7 @@ export function Sidebar() {
       </Dialog>
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 border-r border-border bg-card py-6 md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-card py-6 pl-[env(safe-area-inset-left)] md:flex">
         <Link
           href="/dashboard"
           className="px-4 font-display text-lg font-semibold"

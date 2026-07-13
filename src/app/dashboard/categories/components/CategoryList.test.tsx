@@ -25,10 +25,10 @@ function mockQueryResult(overrides: Record<string, unknown>) {
 }
 
 describe("CategoryList", () => {
-  it("defaults to the expense tab and shows a loading message", () => {
+  it("defaults to the expense tab and shows a loading skeleton", () => {
     mockQueryResult({ isLoading: true });
     render(<CategoryList />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
     expect(useCategories).toHaveBeenCalledWith({ type: "expense" });
   });
 

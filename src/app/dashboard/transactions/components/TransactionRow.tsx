@@ -36,21 +36,30 @@ export function TransactionRow({ transaction }: { transaction: Transaction }) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b py-3 last:border-b-0">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium">{categoryName}</span>
-        <span className="text-xs text-muted-foreground">
+    // Two stacked rows on a phone, one row from `sm:` up. Side by side, this
+    // row cannot fit 375px: the amount is an unbreakable token (formatMoney
+    // emits a non-breaking space) and the buttons carry `whitespace-nowrap
+    // shrink-0`, so nothing here can give — the overflow used to spill out and
+    // give the whole page a horizontal scrollbar. `min-w-0` on the details
+    // column is what actually lets `truncate` engage; a flex child defaults to
+    // min-width:auto and refuses to shrink below its longest word.
+    <div className="flex flex-col gap-2 border-b py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-sm font-medium">{categoryName}</span>
+        <span className="truncate text-xs text-muted-foreground">
           {accountName} ·{" "}
           {new Date(transaction.date).toLocaleDateString("es-CO")}
         </span>
         {transaction.description && (
-          <span className="text-xs text-muted-foreground">
+          <span className="truncate text-xs text-muted-foreground">
             {transaction.description}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        <span className={`font-tabular text-sm font-medium ${amountClassName}`}>
+      <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+        <span
+          className={`font-tabular text-sm font-medium ${amountClassName}`}
+        >
           {sign}
           {formatMoney(transaction.amount, transaction.currency)}
         </span>

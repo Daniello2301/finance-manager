@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Field,
   FieldError,
@@ -136,9 +137,8 @@ export function CategoryForm() {
 
             <Field data-invalid={!!errors.type}>
               <FieldLabel htmlFor="category-type">Tipo</FieldLabel>
-              <select
+              <Select
                 id="category-type"
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm disabled:opacity-50"
                 aria-invalid={!!errors.type}
                 disabled={isEditing}
                 {...register("type")}
@@ -148,13 +148,18 @@ export function CategoryForm() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <FieldError errors={[errors.type]} />
             </Field>
 
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Guardar"}
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={close}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
           </FieldGroup>
         </form>
       </DialogContent>

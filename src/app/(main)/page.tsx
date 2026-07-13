@@ -40,7 +40,7 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 flex-col">
-      <section className="flex flex-col items-center gap-6 px-6 py-24 text-center sm:py-32">
+      <section className="flex flex-col items-center gap-6 px-4 py-16 text-center sm:px-6 sm:py-24 lg:py-32">
         <h1 className="max-w-2xl text-balance font-display text-4xl font-semibold tracking-tight sm:text-5xl">
           Tu dinero, con claridad total.
         </h1>
@@ -62,7 +62,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-4xl gap-4 px-6 pb-24 sm:grid-cols-2">
+      <section className="mx-auto grid w-full max-w-4xl gap-4 px-4 pb-16 sm:grid-cols-2 sm:px-6 sm:pb-24">
         {FEATURES.map(({ icon: Icon, title, description }) => (
           <Card key={title}>
             <CardHeader className="flex flex-row items-center gap-3">

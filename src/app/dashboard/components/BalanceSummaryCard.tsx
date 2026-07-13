@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/money";
 import { useDashboardSummary } from "@/hooks/useDashboard";
 
@@ -13,7 +14,7 @@ export function BalanceSummaryCard() {
         <CardTitle>Balance total</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
-        {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+        {isLoading && <Skeleton className="h-8 w-40" />}
         {isError && (
           <p className="text-destructive">No se pudo cargar el balance.</p>
         )}

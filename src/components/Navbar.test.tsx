@@ -22,7 +22,7 @@ describe("Navbar", () => {
     } as unknown as ReturnType<typeof useSession>);
 
     render(<Navbar />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows login/signup links when unauthenticated", () => {

@@ -24,7 +24,7 @@ export default function DashboardPage() {
         : "data";
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-4 sm:p-6">
       <h1 className="font-display text-2xl font-semibold">
         Hola, {session?.user?.name}
       </h1>

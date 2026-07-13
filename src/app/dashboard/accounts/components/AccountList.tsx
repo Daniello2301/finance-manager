@@ -1,5 +1,6 @@
 "use client";
 
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { useAccounts } from "@/hooks/useAccounts";
 import { AccountCard } from "./AccountCard";
 
@@ -7,7 +8,7 @@ export function AccountList() {
   const { data: accounts, isLoading, isError } = useAccounts();
 
   if (isLoading) {
-    return <p className="text-muted-foreground">Cargando cuentas...</p>;
+    return <ListSkeleton rows={3} />;
   }
 
   if (isError) {

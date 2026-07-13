@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useTransactionFiltersStore } from "@/stores/transactionFilters.store";
@@ -13,8 +14,11 @@ const TYPE_OPTIONS = [
   { value: "expense", label: "Gastos" },
 ] as const;
 
-const SELECT_CLASSNAME =
-  "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm";
+// Full width on a phone (a native <select> otherwise grows to fit its longest
+// option — one long account name would push the row past the viewport and give
+// the whole page a horizontal scrollbar), auto width once there's room to sit
+// side by side.
+const FILTER_CELL = "flex w-full flex-col gap-1 sm:w-auto";
 
 export function TransactionFilters() {
   const accountId = useTransactionFiltersStore((state) => state.accountId);
@@ -36,13 +40,12 @@ export function TransactionFilters() {
 
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <div className="flex flex-col gap-1">
+      <div className={FILTER_CELL}>
         <Label htmlFor="filter-account">Cuenta</Label>
-        <select
+        <Select
           id="filter-account"
           value={accountId ?? ""}
           onChange={(event) => setAccountId(event.target.value || undefined)}
-          className={SELECT_CLASSNAME}
         >
           <option value="">Todas</option>
           {accounts?.map((account) => (
@@ -50,16 +53,15 @@ export function TransactionFilters() {
               {account.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className={FILTER_CELL}>
         <Label htmlFor="filter-category">Categoría</Label>
-        <select
+        <Select
           id="filter-category"
           value={categoryId ?? ""}
           onChange={(event) => setCategoryId(event.target.value || undefined)}
-          className={SELECT_CLASSNAME}
         >
           <option value="">Todas</option>
           {categories?.map((category) => (
@@ -67,12 +69,12 @@ export function TransactionFilters() {
               {category.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className={FILTER_CELL}>
         <Label htmlFor="filter-type">Tipo</Label>
-        <select
+        <Select
           id="filter-type"
           value={type ?? ""}
           onChange={(event) =>
@@ -83,17 +85,16 @@ export function TransactionFilters() {
                 | undefined
             )
           }
-          className={SELECT_CLASSNAME}
         >
           {TYPE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className={FILTER_CELL}>
         <Label htmlFor="filter-date-from">Desde</Label>
         <Input
           id="filter-date-from"
@@ -103,7 +104,7 @@ export function TransactionFilters() {
         />
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className={FILTER_CELL}>
         <Label htmlFor="filter-date-to">Hasta</Label>
         <Input
           id="filter-date-to"
@@ -113,7 +114,12 @@ export function TransactionFilters() {
         />
       </div>
 
-      <Button variant="ghost" size="sm" onClick={clearFilters}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={clearFilters}
+        className="w-full sm:w-auto"
+      >
         Limpiar filtros
       </Button>
     </div>

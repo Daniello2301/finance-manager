@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Field,
   FieldError,
@@ -153,9 +154,8 @@ export function AccountForm() {
 
             <Field data-invalid={!!errors.type}>
               <FieldLabel htmlFor="account-type">Tipo</FieldLabel>
-              <select
+              <Select
                 id="account-type"
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                 aria-invalid={!!errors.type}
                 {...register("type")}
               >
@@ -164,7 +164,7 @@ export function AccountForm() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <FieldError errors={[errors.type]} />
             </Field>
 
@@ -176,6 +176,7 @@ export function AccountForm() {
                 <Input
                   id="account-initial-balance"
                   type="number"
+                  inputMode="decimal"
                   aria-invalid={!!errors.initialBalance}
                   {...register("initialBalance", { valueAsNumber: true })}
                 />
@@ -191,6 +192,7 @@ export function AccountForm() {
                 <Input
                   id="account-credit-limit"
                   type="number"
+                  inputMode="decimal"
                   aria-invalid={!!errors.creditLimit}
                   {...register("creditLimit", { valueAsNumber: true })}
                 />
@@ -198,9 +200,14 @@ export function AccountForm() {
               </Field>
             )}
 
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Guardar"}
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={close}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
           </FieldGroup>
         </form>
       </DialogContent>

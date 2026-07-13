@@ -70,10 +70,10 @@ describe("BudgetList", () => {
     } as never);
   });
 
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     mockBudgetsResult({ isLoading: true });
     render(<BudgetList period="2026-07" />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgets, useDeleteBudget, type Budget } from "@/hooks/useBudgets";
 import { confirmAction } from "@/lib/notifications";
@@ -30,8 +31,10 @@ function BudgetRow({
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border p-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium">{categoryName}</span>
-        <div className="flex gap-2">
+        <span className="min-w-0 truncate text-sm font-medium">
+          {categoryName}
+        </span>
+        <div className="flex shrink-0 gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -66,7 +69,7 @@ export function BudgetList({ period }: { period: string }) {
   });
 
   if (isLoading) {
-    return <p className="text-muted-foreground">Cargando presupuestos...</p>;
+    return <ListSkeleton rows={4} />;
   }
 
   if (isError) {

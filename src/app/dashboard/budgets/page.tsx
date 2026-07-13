@@ -36,7 +36,7 @@ export default function BudgetsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold">Presupuestos</h1>
         <div className="flex flex-wrap items-center gap-3">

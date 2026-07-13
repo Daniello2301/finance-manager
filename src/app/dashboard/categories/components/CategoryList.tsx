@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { useArchiveCategory, useCategories } from "@/hooks/useCategories";
 import { useCategoryModalStore } from "@/stores/categoryModal.store";
 
@@ -38,7 +39,7 @@ export function CategoryList() {
       </div>
 
       {isLoading && (
-        <p className="text-muted-foreground">Cargando categorías...</p>
+        <ListSkeleton rows={5} />
       )}
 
       {isError && (
@@ -62,8 +63,8 @@ export function CategoryList() {
                 key={category._id}
                 className="flex items-center justify-between px-4 py-2"
               >
-                <span>{category.name}</span>
-                <div className="flex gap-2">
+                <span className="min-w-0 truncate">{category.name}</span>
+                <div className="flex shrink-0 gap-2">
                   <Button
                     variant="outline"
                     size="sm"

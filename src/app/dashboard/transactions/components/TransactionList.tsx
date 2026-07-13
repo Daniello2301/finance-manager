@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransactionFiltersStore } from "@/stores/transactionFilters.store";
 import { TransactionRow } from "./TransactionRow";
@@ -24,7 +25,7 @@ export function TransactionList() {
   });
 
   if (isLoading) {
-    return <p className="text-muted-foreground">Cargando transacciones...</p>;
+    return <ListSkeleton rows={5} />;
   }
 
   if (isError) {

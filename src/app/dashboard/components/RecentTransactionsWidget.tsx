@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/money";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
@@ -26,7 +27,7 @@ export function RecentTransactionsWidget() {
         </Link>
       </CardHeader>
       <CardContent className="flex flex-col">
-        {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+        {isLoading && <ListSkeleton rows={5} />}
         {isError && (
           <p className="text-destructive">
             No se pudieron cargar las transacciones.
@@ -58,15 +59,17 @@ export function RecentTransactionsWidget() {
               key={transaction._id}
               className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0"
             >
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{categoryName}</span>
-                <span className="text-xs text-muted-foreground">
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium">
+                  {categoryName}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
                   {accountName} ·{" "}
                   {new Date(transaction.date).toLocaleDateString("es-CO")}
                 </span>
               </div>
               <span
-                className={`font-tabular text-sm font-medium ${
+                className={`shrink-0 font-tabular text-sm font-medium ${
                   isIncome ? "text-positive" : "text-negative"
                 }`}
               >

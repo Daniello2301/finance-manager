@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BudgetProgress } from "@/components/BudgetProgress";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/hooks/useCategories";
 import { useDashboardSummary } from "@/hooks/useDashboard";
 
@@ -24,7 +25,7 @@ export function BudgetSummaryWidget() {
         </Link>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {isLoading && <p className="text-muted-foreground">Cargando...</p>}
+        {isLoading && <ListSkeleton rows={3} />}
         {isError && (
           <p className="text-destructive">
             No se pudieron cargar los presupuestos.

@@ -25,10 +25,10 @@ function mockQueryResult(overrides: Record<string, unknown>) {
 }
 
 describe("AccountList", () => {
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     mockQueryResult({ isLoading: true });
     render(<AccountList />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {

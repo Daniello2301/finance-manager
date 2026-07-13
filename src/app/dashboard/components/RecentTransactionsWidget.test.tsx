@@ -46,10 +46,10 @@ describe("RecentTransactionsWidget", () => {
     } as never);
   });
 
-  it("shows a loading message", () => {
+  it("shows a loading skeleton", () => {
     mockTransactionsResult({ isLoading: true });
     render(<RecentTransactionsWidget />);
-    expect(screen.getByText(/cargando/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows an error message", () => {
