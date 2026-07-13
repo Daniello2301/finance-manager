@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   ArrowLeftRight,
+  Landmark,
   LayoutDashboard,
   Menu,
   PiggyBank,
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
     icon: ArrowLeftRight,
   },
   { href: "/dashboard/budgets", label: "Presupuestos", icon: PiggyBank },
+  { href: "/dashboard/debts", label: "Deudas", icon: Landmark },
 ] as const;
 
 function SidebarNav({

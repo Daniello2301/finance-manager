@@ -6,6 +6,7 @@ import { BalanceSummaryCard } from "./components/BalanceSummaryCard";
 import { TrendChart } from "./components/TrendChart";
 import { CategoryBreakdownChart } from "./components/CategoryBreakdownChart";
 import { BudgetSummaryWidget } from "./components/BudgetSummaryWidget";
+import { DebtSummaryWidget } from "./components/DebtSummaryWidget";
 import { RecentTransactionsWidget } from "./components/RecentTransactionsWidget";
 import { EmptyDashboardState } from "./components/EmptyDashboardState";
 
@@ -29,7 +30,14 @@ export default function DashboardPage() {
         Hola, {session?.user?.name}
       </h1>
 
-      <BalanceSummaryCard />
+      {/* Outside the "has any transactions" gate on purpose: a debt registered
+          before its first payment creates no transaction, so gating this would
+          make a freshly-added debt invisible on the dashboard. And "what I owe"
+          sits at the same level as "what I have" — it belongs next to it. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <BalanceSummaryCard />
+        <DebtSummaryWidget />
+      </div>
 
       {status === "error" && (
         <p className="text-destructive">

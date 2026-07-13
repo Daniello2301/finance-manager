@@ -1,8 +1,9 @@
 # Project Constitution: Personal Finance Manager
 
 **Status**: Ratified
-**Last Updated**: 2026-07-08
+**Last Updated**: 2026-07-13
 **Ratified By**: informatica@fabricato.com — 2026-07-08
+**Last Amendment**: 2026-07-13 (Fase 2 scope: Deudas added — see Decision Log)
 
 ---
 
@@ -119,6 +120,11 @@
 | 2026-07-08 | `Account.currentBalance` is denormalized and updated inside Mongoose multi-document transactions, not computed on read. | informatica@fabricato.com | Balance is read on nearly every page (navbar, dashboard, transaction form); MongoDB replica sets (including Atlas free tier) support ACID transactions, removing the historical objection to denormalization. A `recomputeAccountBalance` utility exists as a correctness backstop. |
 | 2026-07-08 | Multi-tenant isolation enforced via `userId`-prefixed indexes + explicit `findForUser` helpers, not global Mongoose middleware. | informatica@fabricato.com | Global find-middleware can't cleanly allow the legitimate cross-tenant query needed by the recurring-transactions cron sweep. |
 | 2026-07-08 | Money stored as integer minor units across all schemas. | informatica@fabricato.com | Avoids floating-point drift in balance arithmetic and `Decimal128` JSON-serialization friction. |
+| 2026-07-13 | **Fase 2 scope amended**: Fase 2 = Deudas + Recurrentes + Metas de ahorro + Multi-moneda. Deudas is added and sequenced **first**. | informatica@fabricato.com | Emerged from real use of the MVP. The owner carries several debts (an informal loan at a monthly rate, a bank loan of known instalment but unknown rate, a BNPL plan) and the app could not represent any of them: a debt has a principal, a rate, an instalment and a payoff — none of which fit on a `Category`, which is only a label. Sequenced first because it is the largest gap between what the app records and what the owner actually needs to decide. |
+| 2026-07-13 | A **debt payment is a `Transaction`** (an expense carrying a `debtId`), not a separate payment entity. | informatica@fabricato.com | The money genuinely leaves an account, so it must move `Account.currentBalance`, appear in the transaction history and count against budgets. Modelling payments separately would have created a second, silent ledger. Reuses `createTransaction` wholesale. |
+| 2026-07-13 | A debt's **outstanding balance is computed on read**, never denormalized — replayed month by month from `principal`, the rate and the payment history. | informatica@fabricato.com | Deliberately the opposite call to `Account.currentBalance` (see 2026-07-08), and for the opposite reasons: interest accrues with the calendar rather than with a write, so a denormalized figure would need a monthly cron to stay true and would silently drift whenever a past payment was edited. Same reasoning as Presupuestos' `spentAmount`. Read volume is low (one module page + one dashboard widget). |
+| 2026-07-13 | **Unpaid interest is tracked as arrears, and is NOT capitalized into the principal.** | informatica@fabricato.com | When a payment does not cover the month's interest, most real lenders capitalize the shortfall; the owner's informal lender does not. Capitalizing would overstate the debt for the owner's actual case. But dropping the shortfall silently would understate it, so the accrued unpaid interest is carried and surfaced as its own figure. The principal reflects the owner's reality; the arrears figure keeps the model honest. |
+| 2026-07-13 | Every field of a debt except its **name is optional**; the interest rate may be **derived** when principal + instalment + term are all known. | informatica@fabricato.com | The owner knows different subsets of the facts for different debts (for one he knows the rate; for another only the instalment and the term). A form that demanded everything would simply not be filled in. Where the rate is unknown *and* underivable, the debt is still recorded — it just carries no interest projection, rather than a fabricated one. Deriving a rate requires all three of principal, instalment and term: with only two the equation has two unknowns and any number produced would be invented. |
 
 ---
 
@@ -158,3 +164,10 @@ This constitution ensures the project remains maintainable, testable, and scalab
 **Reviewed By**: informatica@fabricato.com
 **Ratified**: 2026-07-08
 **Effective Date**: 2026-07-08
+
+**Amendment 1** — 2026-07-13, ratified by informatica@fabricato.com.
+Scope only: Fase 2 gains a **Deudas** module, sequenced first, with the five
+decisions recorded in the Decision Log above. No Core Principle is changed, and
+no Documented Exception is required — Deudas is built inside the existing rules
+(integer minor units per Principle 9, `userId`-first indexes and a `findForUser`
+static per Principle 8, test-first at ≥80% coverage per Principle 3).

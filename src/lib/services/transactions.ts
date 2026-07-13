@@ -59,6 +59,8 @@ export interface CreateTransactionServiceInput {
   confirmOverdraft?: boolean;
   recurringTransactionId?: string;
   savingsGoalId?: string;
+  /** Set when this expense is a payment towards a Debt. */
+  debtId?: string;
 }
 
 export interface UpdateTransactionServiceInput {

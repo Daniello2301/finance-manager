@@ -24,6 +24,7 @@ export interface ITransaction extends Document {
   description?: string;
   recurringTransactionId?: Types.ObjectId;
   savingsGoalId?: Types.ObjectId;
+  debtId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,11 +69,18 @@ const transactionSchema = new Schema<ITransaction, ITransactionModel>(
       ref: "RecurringTransaction",
     },
     savingsGoalId: { type: Schema.Types.ObjectId, ref: "SavingsGoal" },
+    // Set when this expense is a payment towards a Debt. A debt payment is a
+    // real transaction — the money genuinely leaves an account — so it moves the
+    // balance, shows up in the history and counts against budgets like any other
+    // expense. Modelling payments separately would have created a second, silent
+    // ledger. Ratified 2026-07-13.
+    debtId: { type: Schema.Types.ObjectId, ref: "Debt" },
   },
   { timestamps: true }
 );
 
 transactionSchema.index({ userId: 1, date: -1 });
+transactionSchema.index({ userId: 1, debtId: 1 });
 transactionSchema.index({ userId: 1, accountId: 1, date: -1 });
 transactionSchema.index({ userId: 1, categoryId: 1, date: -1 });
 transactionSchema.index({ userId: 1, type: 1, date: -1 });
