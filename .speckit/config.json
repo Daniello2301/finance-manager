@@ -1,0 +1,17 @@
+{
+  "project_name": "personal-finance-manager",
+  "version": "0.1.0",
+  "ai_assistant": "claude",
+  "script_type": "ps",
+  "description": "Gestor de gastos personales con Next.js + MongoDB",
+  "stack": {
+    "frontend": "Next.js 16 (App Router) + React 19 + TypeScript",
+    "styling": "Tailwind CSS v4",
+    "backend": "Next.js API Routes",
+    "database": "MongoDB + Mongoose",
+    "auth": "NextAuth.js v4",
+    "state": "Zustand (client) + React Query (server)",
+    "validation": "Zod + react-hook-form",
+    "charts": "Recharts"
+  }
+}
