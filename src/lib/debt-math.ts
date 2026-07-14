@@ -269,3 +269,19 @@ export function replayDebt(
     payments: split,
   };
 }
+
+/**
+ * A monthly rate is STORED as a fraction (0.015) and TYPED as a percentage
+ * (1.5). Confusing the two is an error of two orders of magnitude on somebody's
+ * real money, so the conversion lives here, once, rather than being written out
+ * wherever a rate happens to be read or written.
+ *
+ * The Zod schema additionally rejects `monthlyRate > 1` as a safety net.
+ */
+export function percentToRate(percent: number): number {
+  return percent / 100;
+}
+
+export function rateToPercent(rate: number): number {
+  return rate * 100;
+}

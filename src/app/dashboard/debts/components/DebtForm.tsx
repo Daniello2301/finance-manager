@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toMinorUnits } from "@/lib/money";
-import { deriveMonthlyRate } from "@/lib/debt-math";
+import {
+  deriveMonthlyRate,
+  percentToRate,
+  rateToPercent,
+} from "@/lib/debt-math";
 import { useDebtModalStore } from "@/stores/debtModal.store";
 import { useCreateDebt, useDebts, useUpdateDebt } from "@/hooks/useDebts";
 import { useSeedForm } from "@/hooks/useSeedForm";
@@ -29,7 +33,6 @@ import { useSeedForm } from "@/hooks/useSeedForm";
  * is a hundred-fold error in someone's real debt, and the only defence is to have
  * exactly one line where the units change.
  */
-const PERCENT_TO_FRACTION = 100;
 
 interface DebtFormValues {
   name: string;
@@ -101,7 +104,7 @@ export function DebtForm() {
         // — this is its inverse, and the only other place that may touch it.
         ratePercent:
           debt.monthlyRate !== undefined
-            ? (debt.monthlyRate * PERCENT_TO_FRACTION).toString()
+            ? rateToPercent(debt.monthlyRate).toString()
             : "",
         installmentAmount: debt.installmentAmount?.toString() ?? "",
         installmentCount: debt.installmentCount?.toString() ?? "",
@@ -144,11 +147,8 @@ export function DebtForm() {
         principalValue !== undefined
           ? toMinorUnits(principalValue, "COP")
           : undefined,
-      // The one and only place a percentage becomes a fraction.
       monthlyRate:
-        ratePercent !== undefined
-          ? ratePercent / PERCENT_TO_FRACTION
-          : undefined,
+        ratePercent !== undefined ? percentToRate(ratePercent) : undefined,
       installmentAmount:
         installment !== undefined ? toMinorUnits(installment, "COP") : undefined,
       installmentCount: num(values.installmentCount),
@@ -252,7 +252,7 @@ export function DebtForm() {
                     No pusiste la tasa, pero con el monto, la cuota y el número
                     de cuotas la calculé:{" "}
                     <strong>
-                      {(derived * PERCENT_TO_FRACTION).toFixed(2)}% mensual
+                      {rateToPercent(derived).toFixed(2)}% mensual
                     </strong>{" "}
                     (estimada — no es un dato de tu contrato).
                   </AlertDescription>

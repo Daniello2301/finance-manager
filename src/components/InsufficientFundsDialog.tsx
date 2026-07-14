@@ -22,6 +22,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CategorySelect } from "@/components/CategorySelect";
 import { formatMoney, fromMinorUnits, toMinorUnits } from "@/lib/money";
+import { percentToRate } from "@/lib/debt-math";
 import { useAdjustBalance } from "@/hooks/useAccounts";
 import { useCreateDebt, useDisburseDebt } from "@/hooks/useDebts";
 import { useCreateTransaction } from "@/hooks/useTransactions";
@@ -112,6 +113,13 @@ function Fork({
   const [name, setName] = useState(() =>
     context.description ? `Préstamo: ${context.description}` : "Préstamo"
   );
+  // Shown as 0, not assumed as 0. Without a rate the debt engine reports its
+  // outstanding balance as `null` — "I don't know what you owe" — for a debt
+  // whose principal was just entered, which is useless. So the app proposes the
+  // usual answer for money borrowed from a person (no interest) and puts it on
+  // screen, where the user can change it before submitting. Proposing a number
+  // in plain sight is not the same as inventing one behind their back.
+  const [ratePercent, setRatePercent] = useState("0");
   const [categoryId, setCategoryId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -146,6 +154,7 @@ function Fork({
       const debt = await createDebt.mutateAsync({
         name: name.trim() || "Préstamo",
         principal: minorAmount(),
+        monthlyRate: percentToRate(Number(ratePercent) || 0),
         startDate: new Date(),
       });
       // Two steps on purpose: the Debt records what you owe, the disbursement
@@ -256,6 +265,20 @@ function Fork({
               <p className="text-xs text-muted-foreground">
                 Propuesto: lo que te faltaba. Si te dieron más en efectivo,
                 cámbialo.
+              </p>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="loan-rate">Interés mensual (%)</FieldLabel>
+              <Input
+                id="loan-rate"
+                type="number"
+                step="0.01"
+                value={ratePercent}
+                onChange={(event) => setRatePercent(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Déjalo en 0 si no te cobran interés. Sin este dato la app no
+                puede decirte cuánto debes.
               </p>
             </Field>
             <Field>

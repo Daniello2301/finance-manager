@@ -173,6 +173,37 @@ describe("TransactionForm — insufficient funds", () => {
     expect(screen.getByLabelText(/cuánto te prestaron/i)).toHaveValue(150_000);
   });
 
+  // Found by verifying against production, not by any test: a debt created with
+  // no rate makes the debt engine report `outstanding: null` — "I don't know
+  // what you owe" — for a debt whose principal was entered a second earlier.
+  // The rate is proposed as 0 IN PLAIN SIGHT, which is not the same as assuming
+  // it behind the user's back: they see it and can change it before submitting.
+  it("creates the debt with a rate, so the app can say what is owed", async () => {
+    const user = userEvent.setup();
+    const createDebtMutate = vi.fn().mockResolvedValue({ _id: "debt-1" });
+    vi.mocked(useCreateDebt).mockReturnValue({
+      mutateAsync: createDebtMutate,
+      isPending: false,
+    } as never);
+
+    render(<TransactionForm />);
+    await submitAnOverdraft(user);
+    await user.click(await screen.findByText("Lo pedí prestado"));
+
+    expect(screen.getByLabelText(/interés mensual/i)).toHaveValue(0);
+
+    await user.selectOptions(
+      screen.getByLabelText(/cómo entra el dinero/i),
+      CATEGORY_ID
+    );
+    await user.click(screen.getByRole("button", { name: /crear la deuda/i }));
+
+    await waitFor(() => expect(createDebtMutate).toHaveBeenCalled());
+    expect(createDebtMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ principal: 150_000, monthlyRate: 0 })
+    );
+  });
+
   it("wrong account: closes the fork and leaves the form as it was", async () => {
     const user = userEvent.setup();
     render(<TransactionForm />);
