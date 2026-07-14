@@ -69,6 +69,38 @@ describe("debts service", () => {
     return { account, category, debt };
   }
 
+  // The disbursement is an INCOME transaction carrying a debtId: the borrowed
+  // money arriving in an account. `paymentsFor()` used to read every transaction
+  // with that debtId, so it swallowed the disbursement as if it were a payment —
+  // and the debt was paid off with the very money it had lent. A 17.000.000 debt
+  // reported a balance of zero the moment its disbursement was recorded.
+  //
+  // It never crashed. It just returned a false number about the owner's money,
+  // which is the only kind of bug this module can actually have.
+  it("does NOT count the disbursement (an income) as a payment", async () => {
+    const { account, debt } = await seed();
+
+    await Transaction.create({
+      userId,
+      accountId: account.id,
+      categoryId: (
+        await Category.create({ userId, name: "Préstamos", type: "income" })
+      ).id,
+      type: "income",
+      amount: 17_000_000,
+      currency: "COP",
+      date: new Date("2026-01-01T00:00:00.000Z"),
+      debtId: debt.id,
+      origin: "disbursement",
+    });
+
+    const { state } = await getDebtState(userId, debt.id);
+
+    expect(state.payments).toHaveLength(0);
+    // Still owed in full — the money that arrived is not a payment towards itself.
+    expect(state.outstanding).toBeGreaterThanOrEqual(17_000_000);
+  });
+
   it("records a payment as a real transaction that moves the account balance", async () => {
     const { account, category, debt } = await seed();
 

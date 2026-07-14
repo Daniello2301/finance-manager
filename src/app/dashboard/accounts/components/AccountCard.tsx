@@ -17,6 +17,7 @@ import {
   type Account,
 } from "@/hooks/useAccounts";
 import { cn } from "@/lib/utils";
+import { availableBalance, isOverdrawn } from "@/lib/balance";
 
 const TYPE_LABELS: Record<Account["type"], string> = {
   bank: "Banco",
@@ -30,13 +31,21 @@ export function AccountCard({ account }: { account: Account }) {
   const unarchiveAccount = useUnarchiveAccount();
   const recomputeBalance = useRecomputeBalance();
 
+  // The rule lives in @/lib/balance, shared with the server. It used to be
+  // written out by hand here as well, which is exactly how two copies drift.
   const availableCredit =
     account.type === "credit_card" && account.creditLimit !== undefined
-      ? account.creditLimit + account.currentBalance
+      ? availableBalance(account)
       : null;
+  const overdrawn = isOverdrawn(account);
 
   return (
-    <Card className={cn(account.isArchived && "opacity-60")}>
+    <Card
+      className={cn(
+        account.isArchived && "opacity-60",
+        overdrawn && "ring-1 ring-negative"
+      )}
+    >
       <CardHeader>
         <CardTitle className="truncate">{account.name}</CardTitle>
       </CardHeader>
@@ -45,12 +54,28 @@ export function AccountCard({ account }: { account: Account }) {
           {TYPE_LABELS[account.type]} · {account.currency}
           {account.isArchived && " · Archivada"}
         </p>
-        <p className="font-display font-tabular text-2xl">
+        <p
+          className={cn(
+            "font-display font-tabular text-2xl",
+            overdrawn && "text-negative"
+          )}
+        >
           {formatMoney(account.currentBalance, account.currency)}
         </p>
         {availableCredit !== null && (
           <p className="text-sm text-muted-foreground">
             Disponible: {formatMoney(availableCredit, account.currency)}
+          </p>
+        )}
+        {/* Overdrawn: money that isn't there has already been spent. Said out
+            loud, because the whole point of blocking overdrafts at the moment of
+            spending is that the ones which slip through (a correction, a charge
+            the bank already made) must never sit here in silence. A credit card
+            inside its limit is NOT overdrawn — that's what a card is for. */}
+        {overdrawn && (
+          <p className="mt-1 text-xs text-negative">
+            En descubierto. Este dinero salió de algún sitio: revisa si falta
+            registrar un ingreso o un préstamo.
           </p>
         )}
       </CardContent>

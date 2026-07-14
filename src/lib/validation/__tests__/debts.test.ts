@@ -108,12 +108,17 @@ describe("createDebtPaymentSchema", () => {
     ).toBe(false);
   });
 
-  it("carries confirmOverdraft, so paying a debt you can't afford still asks", () => {
+  // `confirmOverdraft` was removed (ratified 2026-07-14). Zod 4 drops unknown
+  // keys silently rather than rejecting them, so an old client sending it gets a
+  // 201 — and the payment is still blocked by the service if the funds aren't
+  // there. What must never happen is the key surviving into the parsed data and
+  // reaching the service, which would resurrect the escape hatch.
+  it("does not carry confirmOverdraft: paying a debt you can't afford is refused, not confirmed", () => {
     const result = createDebtPaymentSchema.safeParse({
       ...valid,
       confirmOverdraft: true,
     });
     expect(result.success).toBe(true);
-    expect(result.data?.confirmOverdraft).toBe(true);
+    expect(result.data).not.toHaveProperty("confirmOverdraft");
   });
 });

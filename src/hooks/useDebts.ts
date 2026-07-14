@@ -207,3 +207,31 @@ export function usePayDebt() {
     },
   });
 }
+
+/** The borrowed money arriving in an account. Only for debts born right now. */
+export function useDisburseDebt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      debtId,
+      input,
+    }: {
+      debtId: string;
+      input: { accountId: string; categoryId: string };
+    }) => {
+      const res = await fetch(`/api/debts/${debtId}/disbursement`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const body = await parseJsonOrThrow(res);
+      return body.transaction;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}

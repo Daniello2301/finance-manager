@@ -10,6 +10,9 @@ import mongoose, {
 export type CategoryType = "income" | "expense";
 
 export interface ICategory extends Document {
+  // Explicit, for the same reason ITransaction declares it: a value annotated
+  // `ICategory` otherwise loses the `id` string virtual getter.
+  id: string;
   userId: Types.ObjectId;
   name: string;
   type: CategoryType;

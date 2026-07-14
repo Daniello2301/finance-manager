@@ -9,6 +9,17 @@ import mongoose, {
 
 export type TransactionType = "income" | "expense";
 
+/**
+ * Marks the incomes that aren't really income — money the user did not earn.
+ *
+ * - `disbursement`: borrowed money arriving in an account (see Debt).
+ * - `adjustment`: money the app didn't know about, reconciled into the balance.
+ *
+ * Both credit an account like a salary does, and both would otherwise inflate
+ * every "how much did I bring in this month" figure the app reports.
+ */
+export type TransactionOrigin = "disbursement" | "adjustment";
+
 export interface ITransaction extends Document {
   // Explicit, since a function whose return type is annotated `ITransaction`
   // (as opposed to letting it infer Mongoose's own HydratedDocument type)
@@ -25,6 +36,7 @@ export interface ITransaction extends Document {
   recurringTransactionId?: Types.ObjectId;
   savingsGoalId?: Types.ObjectId;
   debtId?: Types.ObjectId;
+  origin?: TransactionOrigin;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +87,14 @@ const transactionSchema = new Schema<ITransaction, ITransactionModel>(
     // expense. Modelling payments separately would have created a second, silent
     // ledger. Ratified 2026-07-13.
     debtId: { type: Schema.Types.ObjectId, ref: "Debt" },
+    // Immutable: what a movement *was* is a fact about the past. A disbursement
+    // that could later be relabelled a salary would quietly rewrite both the
+    // debt's payment history and the month's income.
+    origin: {
+      type: String,
+      enum: ["disbursement", "adjustment"],
+      immutable: true,
+    },
   },
   { timestamps: true }
 );

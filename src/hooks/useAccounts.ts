@@ -117,6 +117,43 @@ export function useUnarchiveAccount() {
   });
 }
 
+/**
+ * Recognises money the app didn't know the account had.
+ *
+ * This is the old `confirmOverdraft` in a better suit, and that's understood —
+ * but an adjustment is WRITTEN DOWN, with an amount, a date and a category, so
+ * it can be seen and questioned. The old escape hatch left a mute negative
+ * balance and nothing to audit.
+ */
+export function useAdjustBalance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { amount: number; description?: string };
+    }) => {
+      const res = await fetch(`/api/accounts/${id}/adjustment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const body = await parseJsonOrThrow(res);
+      return body.transaction;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo ajustar el saldo."),
+  });
+}
+
 export function useRecomputeBalance() {
   const queryClient = useQueryClient();
   return useMutation({

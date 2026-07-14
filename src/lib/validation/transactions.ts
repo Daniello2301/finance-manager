@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { objectIdSchema } from "@/lib/validation/common";
 
-// The user has been shown their real available balance and chosen to go ahead
-// anyway. A per-request decision, never persisted on the transaction.
-const confirmOverdraftSchema = z.boolean().optional();
-
 const baseTransactionSchema = z.object({
   accountId: objectIdSchema,
   categoryId: objectIdSchema,
@@ -14,16 +10,16 @@ const baseTransactionSchema = z.object({
   description: z.string().max(200).optional(),
 });
 
-export const createTransactionSchema = baseTransactionSchema.extend({
-  confirmOverdraft: confirmOverdraftSchema,
-});
+// No `confirmOverdraft`. It was removed (ratified 2026-07-14): an expense that
+// exceeds the available balance can no longer be forced through. The client
+// answers "where did the money come from?" instead — a loan, another account, an
+// unrecorded income, or a balance adjustment.
+export const createTransactionSchema = baseTransactionSchema;
 
 // No .refine() and no .omit() needed — unlike Accounts' creditLimit rule
 // or Categories' immutable `type`, Transaction has no cross-field rule
 // and no field that must be rejected-not-stripped in a PATCH body.
-export const updateTransactionSchema = baseTransactionSchema.partial().extend({
-  confirmOverdraft: confirmOverdraftSchema,
-});
+export const updateTransactionSchema = baseTransactionSchema.partial();
 
 export const listTransactionsQuerySchema = z.object({
   accountId: objectIdSchema.optional(),

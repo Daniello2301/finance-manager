@@ -3,26 +3,19 @@ import { connectDB } from "@/lib/db";
 import Account, { type IAccount } from "@/lib/models/Account";
 import Transaction, {
   type ITransaction,
+  type TransactionOrigin,
   type TransactionType,
 } from "@/lib/models/Transaction";
 import { InsufficientFundsError, NotFoundError } from "@/lib/errors";
+import { availableBalance } from "@/lib/balance";
 
 export function signedDelta(type: TransactionType, amount: number): number {
   return type === "income" ? amount : -amount;
 }
 
-/**
- * What the account can actually spend.
- *
- * For a credit card the balance runs negative as you use it, so what's spendable
- * is the unused credit — the limit plus the (negative) balance. For bank/cash
- * it's just the balance. Same formula the UI already shows on AccountCard.
- */
-export function availableBalance(account: IAccount): number {
-  return account.type === "credit_card"
-    ? (account.creditLimit ?? 0) + account.currentBalance
-    : account.currentBalance;
-}
+// Re-exported so existing importers keep working; the rule itself now lives in
+// `@/lib/balance`, which the browser can import too (it has no Mongoose).
+export { availableBalance };
 
 /**
  * Throws if money is leaving the account and there isn't enough of it.
@@ -32,16 +25,20 @@ export function availableBalance(account: IAccount): number {
  * That keeps it to a single round trip instead of read-then-check-then-write,
  * and leaves no window where a concurrent write could slip between the two.
  *
- * This is a warning, not a rule: the caller can pass `confirmOverdraft` to go
- * ahead deliberately. The error carries the balance as it was *before* the
- * attempt, because that's the number worth showing the user.
+ * This is a RULE, not a warning. `confirmOverdraft` used to let a caller go
+ * ahead anyway; it was removed (ratified 2026-07-14). Money does not appear out
+ * of nowhere — if you paid with money you didn't have, it came from somewhere,
+ * and the caller is made to say where.
+ *
+ * Only creation goes through here. Editing or deleting a transaction is
+ * correcting the record of money that already moved, and is allowed to leave the
+ * account overdrawn — see updateTransaction/deleteTransaction.
+ *
+ * The error carries the balance as it was *before* the attempt, because that's
+ * the number worth showing the user.
  */
-function assertSufficientFunds(
-  account: IAccount,
-  appliedDelta: number,
-  confirmOverdraft: boolean | undefined
-): void {
-  if (confirmOverdraft || appliedDelta >= 0) return;
+function assertSufficientFunds(account: IAccount, appliedDelta: number): void {
+  if (appliedDelta >= 0) return;
 
   const available = availableBalance(account);
   if (available >= 0) return;
@@ -56,11 +53,12 @@ export interface CreateTransactionServiceInput {
   amount: number;
   date: Date;
   description?: string;
-  confirmOverdraft?: boolean;
   recurringTransactionId?: string;
   savingsGoalId?: string;
   /** Set when this expense is a payment towards a Debt. */
   debtId?: string;
+  /** Marks an income that isn't earnings — see TransactionOrigin. */
+  origin?: TransactionOrigin;
 }
 
 export interface UpdateTransactionServiceInput {
@@ -70,7 +68,6 @@ export interface UpdateTransactionServiceInput {
   amount?: number;
   date?: Date;
   description?: string;
-  confirmOverdraft?: boolean;
 }
 
 /**
@@ -87,9 +84,7 @@ export async function createTransaction(
   const session = await mongoose.startSession();
   try {
     return await session.withTransaction(async () => {
-      // `confirmOverdraft` is a request-level decision, not a property of the
-      // transaction — keep it out of the document.
-      const { confirmOverdraft, ...fields } = input;
+      const fields = input;
       const delta = signedDelta(fields.type, fields.amount);
 
       const account = await Account.findOneAndUpdate(
@@ -100,7 +95,9 @@ export async function createTransaction(
       if (!account) {
         throw new NotFoundError("La cuenta no existe o no te pertenece");
       }
-      assertSufficientFunds(account, delta, confirmOverdraft);
+      // Creation is a decision, and this is where it gets stopped. There is no
+      // override — the caller must instead say where the money came from.
+      assertSufficientFunds(account, delta);
 
       const [tx] = await Transaction.create(
         [{ ...fields, userId, currency: account.currency }],
@@ -130,7 +127,7 @@ export async function updateTransaction(
         throw new NotFoundError();
       }
 
-      const { confirmOverdraft, ...fields } = input;
+      const fields = input;
 
       // A partial PATCH may omit accountId/type/amount — compute the
       // effective values up front so a description-only edit doesn't
@@ -171,16 +168,14 @@ export async function updateTransaction(
         throw new NotFoundError("La cuenta no existe o no te pertenece");
       }
 
-      // How much this account moved, net. When the edit keeps the same account
-      // the returned doc already reflects both the revert and the apply, so the
-      // net is the difference; when the transaction is moved to a different
-      // account, that account only ever saw the apply.
-      const appliedDelta =
-        effectiveAccountId === existing.accountId.toString()
-          ? signedDelta(effectiveType, effectiveAmount) -
-            signedDelta(existing.type, existing.amount)
-          : signedDelta(effectiveType, effectiveAmount);
-      assertSufficientFunds(appliedAccount, appliedDelta, confirmOverdraft);
+      // Deliberately NO assertSufficientFunds here (ratified 2026-07-14).
+      //
+      // A transaction that already exists is money that already moved: editing
+      // it is correcting the record of a fact, not deciding to spend. Blocking
+      // the edit would lock the user inside their own mistake — record 100.000
+      // for what was really 250.000, then be refused the correction for "lack of
+      // funds", with no way out. The resulting negative balance is surfaced as an
+      // overdraft instead: loud, explained, and answerable.
 
       // currency stays whatever it was set to at creation — immutable at
       // the schema level, and moot in Fase 1 since every account is COP.

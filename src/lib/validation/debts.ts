@@ -50,8 +50,8 @@ export const updateDebtSchema = baseDebtSchema.partial().extend({
  * a payment is a real expense in the ledger, not a special case. The UI
  * preselects an expense category but never invents one behind the user's back.
  *
- * `confirmOverdraft` rides along so that paying a debt with money you don't have
- * asks for confirmation exactly like any other expense (inherited from Fase A).
+ * Paying a debt with money you don't have is blocked exactly like any other
+ * expense — no `confirmOverdraft`, no override (ratified 2026-07-14).
  */
 export const createDebtPaymentSchema = z.object({
   accountId: objectIdSchema,
@@ -62,7 +62,13 @@ export const createDebtPaymentSchema = z.object({
     .positive("El monto debe ser mayor que cero"),
   date: z.coerce.date(),
   description: z.string().trim().max(200).optional(),
-  confirmOverdraft: z.boolean().optional(),
+});
+
+/** The borrowed money arriving in one of the user's accounts. */
+export const createDisbursementSchema = z.object({
+  accountId: objectIdSchema,
+  categoryId: objectIdSchema,
+  date: z.coerce.date().optional(),
 });
 
 export const listDebtsQuerySchema = z.object({

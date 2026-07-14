@@ -132,6 +132,41 @@ describe("dashboard service", () => {
       expect(trend[2].expense).toBe(50000);
     });
 
+    // A disbursement (borrowed money) and an adjustment (money the app hadn't
+    // heard of) both credit an account exactly like a salary — but the user
+    // EARNED neither. Counting them would report the month you took on a debt as
+    // a month you did well, which is the most dangerous kind of wrong this app
+    // can be: it reads as good news.
+    it("excludes disbursements and adjustments from income", async () => {
+      const incomeCategory = await seedCategory("income");
+      const now = new Date();
+
+      await seedTransaction(incomeCategory.id, "income", 900_000, now);
+      await Transaction.create({
+        userId,
+        accountId: new mongoose.Types.ObjectId(),
+        categoryId: incomeCategory.id,
+        type: "income",
+        amount: 5_000_000,
+        currency: "COP",
+        date: now,
+        origin: "disbursement",
+      });
+      await Transaction.create({
+        userId,
+        accountId: new mongoose.Types.ObjectId(),
+        categoryId: incomeCategory.id,
+        type: "income",
+        amount: 300_000,
+        currency: "COP",
+        date: now,
+        origin: "adjustment",
+      });
+
+      const trend = await getMonthlyTrend(userId, 1);
+      expect(trend[0].income).toBe(900_000);
+    });
+
     it("sums income and expense separately per month", async () => {
       const expenseCategory = await seedCategory("expense");
       const incomeCategory = await seedCategory("income");

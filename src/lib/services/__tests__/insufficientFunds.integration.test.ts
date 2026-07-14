@@ -12,15 +12,21 @@ import Transaction from "@/lib/models/Transaction";
 import { InsufficientFundsError } from "@/lib/errors";
 import {
   createTransaction,
+  deleteTransaction,
   updateTransaction,
 } from "@/lib/services/transactions";
 
 /**
- * The insufficient-funds guard is a warning, not a rule: the caller can override
- * it with `confirmOverdraft`. What must hold either way is that a *rejected*
- * attempt leaves nothing behind — the guard throws from inside
- * `session.withTransaction`, so the balance `$inc` it just applied has to be
- * rolled back with it. These tests exist mostly to prove that rollback.
+ * The insufficient-funds guard is a RULE, not a warning (ratified 2026-07-14):
+ * `confirmOverdraft` is gone and an expense past the available balance simply
+ * cannot be created. Two things must hold, and these tests exist to prove both:
+ *
+ * 1. A rejected attempt leaves NOTHING behind. The guard throws from inside
+ *    `session.withTransaction`, so the balance `$inc` it just applied is rolled
+ *    back with it.
+ * 2. The rule stops at creation. Editing or deleting a transaction is correcting
+ *    the record of money that already moved, and IS allowed to overdraw the
+ *    account — otherwise the user is locked inside their own mistake.
  */
 describe("transactions service — insufficient funds", () => {
   const userId = new mongoose.Types.ObjectId().toString();
@@ -102,21 +108,84 @@ describe("transactions service — insufficient funds", () => {
     }
   });
 
-  it("goes through, and lets the balance go negative, when confirmOverdraft is set", async () => {
+  // There used to be a `confirmOverdraft` escape hatch here. It was removed
+  // (ratified 2026-07-14): money does not appear out of nowhere. Creating is a
+  // decision, and the decision is now simply refused — the caller has to say
+  // where the money came from instead (a loan, another account, an unrecorded
+  // income, or a balance adjustment).
+  it("cannot be forced through: the balance is left untouched", async () => {
     const accountId = await seedCash(50000);
     const categoryId = await seedCategory();
 
+    await expect(
+      createTransaction(userId, {
+        accountId,
+        categoryId,
+        type: "expense",
+        amount: 80000,
+        date: new Date("2026-07-13"),
+      })
+    ).rejects.toBeInstanceOf(InsufficientFundsError);
+
+    const account = await Account.findById(accountId);
+    expect(account?.currentBalance).toBe(50000);
+    expect(await Transaction.countDocuments({ userId })).toBe(0);
+  });
+
+  // The other side of the same rule. A transaction that already exists is money
+  // that already moved: correcting it is fixing the record of a fact, not
+  // deciding to spend. Blocking it would lock the user inside their own typo —
+  // record 100.000 for what was really 250.000, then be refused the correction.
+  it("lets an EDIT overdraw the account, because editing is correcting the past", async () => {
+    const accountId = await seedCash(50000);
+    const categoryId = await seedCategory();
+
+    const tx = await createTransaction(userId, {
+      accountId,
+      categoryId,
+      type: "expense",
+      amount: 30000,
+      date: new Date("2026-07-13"),
+    });
+
+    await updateTransaction(userId, tx.id, { amount: 200000 });
+
+    const account = await Account.findById(accountId);
+    expect(account?.currentBalance).toBe(-150000);
+  });
+
+  it("lets a DELETE overdraw the account, for the same reason", async () => {
+    const accountId = await seedCash(0);
+    const categoryId = await seedCategory();
+    const incomeCategory = await Category.create({
+      userId,
+      name: "Salario",
+      type: "income",
+    });
+
+    // A salary that never happened, and the spending that followed it.
+    const badIncome = await createTransaction(userId, {
+      accountId,
+      categoryId: incomeCategory.id,
+      type: "income",
+      amount: 3_000_000,
+      date: new Date("2026-07-01"),
+    });
     await createTransaction(userId, {
       accountId,
       categoryId,
       type: "expense",
-      amount: 80000,
-      date: new Date("2026-07-13"),
-      confirmOverdraft: true,
+      amount: 2_000_000,
+      date: new Date("2026-07-05"),
     });
 
+    // The correction goes through IN FULL — it is not clipped to the available
+    // balance. Clipping would leave a 1.000.000 income on the books that nobody
+    // ever received: to avoid an ugly number, the app would have forged history.
+    await deleteTransaction(userId, badIncome.id);
+
     const account = await Account.findById(accountId);
-    expect(account?.currentBalance).toBe(-30000);
+    expect(account?.currentBalance).toBe(-2_000_000);
   });
 
   it("measures a credit card against its credit limit, not against zero", async () => {
@@ -180,31 +249,12 @@ describe("transactions service — insufficient funds", () => {
     expect(account?.currentBalance).toBe(-40000);
   });
 
-  it("rejects an edit that raises the amount past the balance, and reverts cleanly", async () => {
-    const accountId = await seedCash(100000);
-    const categoryId = await seedCategory();
-
-    const tx = await createTransaction(userId, {
-      accountId,
-      categoryId,
-      type: "expense",
-      amount: 30000,
-      date: new Date("2026-07-13"),
-    });
-    expect((await Account.findById(accountId))?.currentBalance).toBe(70000);
-
-    await expect(
-      updateTransaction(userId, tx._id.toString(), { amount: 250000 })
-    ).rejects.toBeInstanceOf(InsufficientFundsError);
-
-    // updateTransaction reverts the old delta and applies the new one; a failure
-    // partway through must not leave the revert applied on its own.
-    const account = await Account.findById(accountId);
-    expect(account?.currentBalance).toBe(70000);
-
-    const reloaded = await Transaction.findById(tx._id);
-    expect(reloaded?.amount).toBe(30000);
-  });
+  // The test that used to sit here asserted that an edit past the balance was
+  // REJECTED. That behaviour was deliberately reversed (ratified 2026-07-14) —
+  // it locked the user inside their own typo. The rule it was defending now
+  // lives in "lets an EDIT overdraw the account" above, in the opposite
+  // direction. Deleted rather than left skipped: a test of a rule we no longer
+  // hold is worse than no test.
 
   it("allows an edit below the balance without any confirmation", async () => {
     const accountId = await seedCash(100000);

@@ -53,6 +53,12 @@ export async function getMonthlyTrend(
       $match: {
         userId: new mongoose.Types.ObjectId(userId),
         date: { $gte: since },
+        // Excludes disbursements and balance adjustments. They credit an account
+        // like a salary does, but the user did not EARN that money — one was
+        // borrowed, the other was already there and the app hadn't heard of it.
+        // Counting them would report a month where you took on debt as a month
+        // where you did well.
+        origin: { $exists: false },
       },
     },
     {

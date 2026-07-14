@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -19,15 +20,17 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AccountSelect } from "@/components/AccountSelect";
 import { CategorySelect } from "@/components/CategorySelect";
-import { formatMoney, fromMinorUnits, toMinorUnits } from "@/lib/money";
+import { fromMinorUnits, toMinorUnits } from "@/lib/money";
 import { isInsufficientFunds } from "@/lib/api-client";
-import { confirmAction } from "@/lib/notifications";
+import {
+  InsufficientFundsDialog,
+  type InsufficientFunds,
+} from "@/components/InsufficientFundsDialog";
 import {
   createTransactionSchema,
   updateTransactionSchema,
 } from "@/lib/validation/transactions";
 import { useSeedForm } from "@/hooks/useSeedForm";
-import { isConfirmPending } from "@/stores/confirm.store";
 import { useTransactionModalStore } from "@/stores/transactionModal.store";
 import {
   useCreateTransaction,
@@ -63,12 +66,18 @@ export function TransactionForm() {
   const isSubmitting =
     createTransaction.isPending || updateTransaction.isPending;
 
+  // Set when the server refuses the write for lack of funds. Holds the figures
+  // the server sent back, which are the authoritative ones — the cached balance
+  // in this component can be stale.
+  const [shortfall, setShortfall] = useState<InsufficientFunds | null>(null);
+
   const {
     control,
     register,
     handleSubmit,
     watch,
     setValue,
+    getValues,
     reset,
     setError,
     formState: { errors },
@@ -123,7 +132,7 @@ export function TransactionForm() {
     setValue("categoryId", "");
   };
 
-  const onSubmit = async (values: TransactionFormValues) => {
+  const submitValues = async (values: TransactionFormValues) => {
     const input = {
       accountId: values.accountId,
       categoryId: values.categoryId,
@@ -133,45 +142,31 @@ export function TransactionForm() {
       description: values.description || undefined,
     };
 
-    const submit = (confirmOverdraft?: boolean) =>
-      isEditing && editingTransactionId
-        ? updateTransaction.mutateAsync({
-            id: editingTransactionId,
-            input: { ...input, confirmOverdraft },
-          })
-        : createTransaction.mutateAsync({ ...input, confirmOverdraft });
-
     try {
-      await submit();
+      if (isEditing && editingTransactionId) {
+        await updateTransaction.mutateAsync({
+          id: editingTransactionId,
+          input,
+        });
+      } else {
+        await createTransaction.mutateAsync(input);
+      }
       close();
     } catch (error) {
       // The server is the authority on the balance — the cached one here can be
-      // stale. So we don't pre-check: we let the write be rejected, then quote
-      // the figure the server sent back and offer to go ahead anyway.
+      // stale — so we don't pre-check: we let the write be rejected and quote
+      // the figure the server sent back. There is no "register it anyway" any
+      // more (ratified 2026-07-14): the money came from somewhere, and the
+      // dialog's whole job is to find out where.
       if (isInsufficientFunds(error)) {
-        const confirmed = await confirmAction({
-          title: "Saldo insuficiente",
-          text: `Esta cuenta solo tiene ${formatMoney(
-            error.body.available,
-            error.body.currency
-          )} disponible. ¿Registrar la transacción de todos modos?`,
-          confirmButtonText: "Sí, registrarla",
+        setShortfall({
+          accountId: values.accountId,
+          available: error.body.available,
+          currency: error.body.currency,
+          attempted: input.amount,
+          description: input.description,
         });
-        if (!confirmed) return;
-
-        try {
-          await submit(true);
-          close();
-          return;
-        } catch (retryError) {
-          setError("root", {
-            message:
-              retryError instanceof Error
-                ? retryError.message
-                : "Ocurrió un error. Intenta de nuevo.",
-          });
-          return;
-        }
+        return;
       }
 
       setError("root", {
@@ -183,13 +178,16 @@ export function TransactionForm() {
     }
   };
 
+  const onSubmit = (values: TransactionFormValues) => submitValues(values);
+
   return (
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        // Never close while a confirmation raised from inside this form is
-        // still awaiting an answer — see isConfirmPending.
-        if (!open && !isConfirmPending()) close();
+        // Never close while the insufficient-funds fork raised from inside this
+        // form is still open — closing would throw away what the user typed,
+        // just as they answer a question the form itself asked.
+        if (!open && !shortfall) close();
       }}
     >
       <DialogContent>
@@ -309,6 +307,23 @@ export function TransactionForm() {
           </FieldGroup>
         </form>
       </DialogContent>
+
+      <InsufficientFundsDialog
+        context={shortfall}
+        onClose={() => setShortfall(null)}
+        onResolved={() => {
+          // The money is accounted for; the expense that was refused can now go
+          // through. Retried from the live form values, not from a snapshot, so
+          // nothing the user changed in the meantime is lost.
+          setShortfall(null);
+          void submitValues(getValues());
+        }}
+        onWrongAccount={() => {
+          // Leave the form open and untouched — they're going to pick another
+          // account and submit again.
+          setShortfall(null);
+        }}
+      />
     </Dialog>
   );
 }

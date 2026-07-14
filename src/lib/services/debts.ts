@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/db";
 import Debt, { type IDebt } from "@/lib/models/Debt";
 import Transaction, { type ITransaction } from "@/lib/models/Transaction";
-import { NotFoundError } from "@/lib/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { createTransaction } from "@/lib/services/transactions";
 import { effectiveRate, replayDebt, type DebtState } from "@/lib/debt-math";
 
@@ -28,6 +28,13 @@ async function paymentsFor(
 ): Promise<Map<string, ITransaction[]>> {
   const payments = await Transaction.findForUser(userId, {
     debtId: { $in: debtIds },
+    // `type: "expense"` is load-bearing, not defensive. A debt can also carry an
+    // *income* transaction — the disbursement, the borrowed money arriving in an
+    // account. Without this filter that income is read back as a payment, and
+    // the debt is paid off with the very money it lent you: register a
+    // 17.000.000 debt with its disbursement and it reports a balance of zero.
+    // It doesn't crash. It just returns a false number about the user's money.
+    type: "expense",
   }).sort({ date: 1 });
 
   const byDebt = new Map<string, ITransaction[]>();
@@ -106,7 +113,6 @@ export async function payDebt(
     amount: number;
     date: Date;
     description?: string;
-    confirmOverdraft?: boolean;
   }
 ): Promise<ITransaction> {
   await connectDB();
@@ -120,6 +126,59 @@ export async function payDebt(
     ...input,
     type: "expense",
     debtId,
+  });
+}
+
+/**
+ * Records the borrowed money ARRIVING in one of the user's accounts.
+ *
+ * Only for debts born from this flow — a user blocked from an expense who says
+ * "I borrowed it". The debts already in the app (the owner's 17.000.000, the
+ * bank loan, ADDI) are money that landed months ago, outside the app, and is
+ * long spent: giving them a disbursement would inject a phantom balance into an
+ * account. Hence optional, and never backfilled.
+ *
+ * Delegates to createTransaction(), like payDebt() — the Mongo transaction and
+ * the `$inc` on Account.currentBalance stay in one place. It's an income, so it
+ * can never trip the insufficient-funds rule.
+ */
+export async function disburseDebt(
+  userId: string,
+  debtId: string,
+  input: { accountId: string; categoryId: string; date?: Date }
+): Promise<ITransaction> {
+  await connectDB();
+
+  const debt = await Debt.findOne({ _id: debtId, userId });
+  if (!debt) {
+    throw new NotFoundError("La deuda no existe o no te pertenece");
+  }
+  if (debt.principal === undefined) {
+    throw new ValidationError(
+      "Esta deuda no tiene un monto registrado, así que no se puede desembolsar"
+    );
+  }
+
+  const already = await Transaction.exists({
+    userId,
+    debtId,
+    origin: "disbursement",
+  });
+  if (already) {
+    throw new ConflictError("Esta deuda ya tiene un desembolso registrado");
+  }
+
+  return createTransaction(userId, {
+    accountId: input.accountId,
+    categoryId: input.categoryId,
+    type: "income",
+    amount: debt.principal,
+    date: input.date ?? new Date(),
+    description: `Desembolso: ${debt.name}`,
+    debtId,
+    // Load-bearing. Without it this is indistinguishable from a salary, and it
+    // would inflate every "income this month" figure the app reports.
+    origin: "disbursement",
   });
 }
 

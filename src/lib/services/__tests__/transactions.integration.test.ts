@@ -102,13 +102,17 @@ describe("transactions service — end-to-end balance invariant", () => {
       initialBalance: 0,
       currentBalance: 0,
     });
+    // Funded, because an expense past the available balance can no longer be
+    // created at all (ratified 2026-07-14 — there is no confirmOverdraft to opt
+    // out of it). What this test proves is that each delta lands on the right
+    // account, and a funded B proves that just as well as an overdrawn one.
     const accountB = await Account.create({
       userId,
       name: "B",
       type: "cash",
       currency: "COP",
-      initialBalance: 0,
-      currentBalance: 0,
+      initialBalance: 500000,
+      currentBalance: 500000,
     });
     const income = await Category.create({
       userId,
@@ -128,35 +132,27 @@ describe("transactions service — end-to-end balance invariant", () => {
       amount: 1000000,
       date: new Date(),
     });
-    // Deliberately overdraws B: the negative balance is the point, since it's
-    // what proves the delta landed on B and not on A. Now that expenses past the
-    // available balance need confirming, that intent has to be stated.
     const tx2 = await createTransaction(userId, {
       accountId: accountB.id,
       categoryId: expense.id,
       type: "expense",
       amount: 200000,
       date: new Date(),
-      confirmOverdraft: true,
     });
 
     expect((await Account.findById(accountA.id))!.currentBalance).toBe(
       1000000
     );
-    expect((await Account.findById(accountB.id))!.currentBalance).toBe(
-      -200000
-    );
+    expect((await Account.findById(accountB.id))!.currentBalance).toBe(300000);
 
     await updateTransaction(userId, tx1.id, { amount: 800000 });
     expect((await Account.findById(accountA.id))!.currentBalance).toBe(
       800000
     );
-    expect((await Account.findById(accountB.id))!.currentBalance).toBe(
-      -200000
-    );
+    expect((await Account.findById(accountB.id))!.currentBalance).toBe(300000);
 
     await deleteTransaction(userId, tx2.id);
-    expect((await Account.findById(accountB.id))!.currentBalance).toBe(0);
+    expect((await Account.findById(accountB.id))!.currentBalance).toBe(500000);
     expect((await Account.findById(accountA.id))!.currentBalance).toBe(
       800000
     );

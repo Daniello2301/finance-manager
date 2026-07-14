@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Dialog,
@@ -21,8 +21,10 @@ import { AccountSelect } from "@/components/AccountSelect";
 import { CategorySelect } from "@/components/CategorySelect";
 import { formatMoney, toMinorUnits } from "@/lib/money";
 import { isInsufficientFunds } from "@/lib/api-client";
-import { confirmAction } from "@/lib/notifications";
-import { isConfirmPending } from "@/stores/confirm.store";
+import {
+  InsufficientFundsDialog,
+  type InsufficientFunds,
+} from "@/components/InsufficientFundsDialog";
 import { useDebtModalStore } from "@/stores/debtModal.store";
 import { useDebts, usePayDebt } from "@/hooks/useDebts";
 
@@ -51,10 +53,13 @@ export function DebtPaymentForm() {
   // separate setState called from the reset effect triggers a cascading render
   // (and eslint rightly rejects it). Controller is how TransactionForm already
   // wires these two selects.
+  const [shortfall, setShortfall] = useState<InsufficientFunds | null>(null);
+
   const {
     control,
     register,
     handleSubmit,
+    getValues,
     reset,
     setError,
     formState: { errors },
@@ -74,7 +79,7 @@ export function DebtPaymentForm() {
     });
   }, [payingDebtId, installmentAmount, reset]);
 
-  const onSubmit = async (values: PaymentFormValues) => {
+  const submitValues = async (values: PaymentFormValues) => {
     if (!payingDebtId) return;
 
     const input = {
@@ -85,42 +90,22 @@ export function DebtPaymentForm() {
       description: values.description.trim() || undefined,
     };
 
-    const submit = (confirmOverdraft?: boolean) =>
-      payDebt.mutateAsync({
-        debtId: payingDebtId,
-        input: { ...input, confirmOverdraft },
-      });
-
     try {
-      await submit();
+      await payDebt.mutateAsync({ debtId: payingDebtId, input });
       close();
     } catch (error) {
-      // A debt payment is an ordinary expense, so it hits the same
-      // insufficient-funds guard as any other — and gets the same confirmation.
+      // A debt payment is an ordinary expense, so it hits the same rule as any
+      // other — and gets the same fork: paying a debt with money you don't have
+      // means the money came from somewhere, and we ask where.
       if (isInsufficientFunds(error)) {
-        const confirmed = await confirmAction({
-          title: "Saldo insuficiente",
-          text: `Esta cuenta solo tiene ${formatMoney(
-            error.body.available,
-            error.body.currency
-          )} disponible. ¿Registrar el pago de todos modos?`,
-          confirmButtonText: "Sí, registrarlo",
+        setShortfall({
+          accountId: values.accountId,
+          available: error.body.available,
+          currency: error.body.currency,
+          attempted: input.amount,
+          description: entry?.debt.name,
         });
-        if (!confirmed) return;
-
-        try {
-          await submit(true);
-          close();
-          return;
-        } catch (retryError) {
-          setError("root", {
-            message:
-              retryError instanceof Error
-                ? retryError.message
-                : "Ocurrió un error. Intenta de nuevo.",
-          });
-          return;
-        }
+        return;
       }
 
       setError("root", {
@@ -132,13 +117,15 @@ export function DebtPaymentForm() {
     }
   };
 
+  const onSubmit = (values: PaymentFormValues) => submitValues(values);
+
   return (
     <Dialog
       open={Boolean(payingDebtId)}
       onOpenChange={(open) => {
-        // Never close while a confirmation raised from inside this form is
-        // still awaiting an answer — see isConfirmPending.
-        if (!open && !isConfirmPending()) close();
+        // Never close while the insufficient-funds fork raised from inside this
+        // form is still open — it would discard what the user typed.
+        if (!open && !shortfall) close();
       }}
     >
       <DialogContent>
@@ -247,6 +234,16 @@ export function DebtPaymentForm() {
           </FieldGroup>
         </form>
       </DialogContent>
+
+      <InsufficientFundsDialog
+        context={shortfall}
+        onClose={() => setShortfall(null)}
+        onResolved={() => {
+          setShortfall(null);
+          void submitValues(getValues());
+        }}
+        onWrongAccount={() => setShortfall(null)}
+      />
     </Dialog>
   );
 }
