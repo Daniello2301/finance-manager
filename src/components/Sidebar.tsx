@@ -14,6 +14,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -73,6 +74,9 @@ function SidebarFooter({ name }: { name?: string | null }) {
       {name && (
         <span className="truncate text-sm text-foreground">{name}</span>
       )}
+      {/* Renders nothing once the app is installed, or on a browser that can't
+          install it — so this stays empty for most people, most of the time. */}
+      <InstallPrompt />
       <Button
         variant="outline"
         size="sm"

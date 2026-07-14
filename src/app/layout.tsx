@@ -27,6 +27,17 @@ export const metadata: Metadata = {
   title: "Finanzas Personales",
   description: "Gestiona tus cuentas, presupuestos y gastos en un solo lugar.",
   applicationName: "Finanzas Personales",
+  // iOS ignores the web manifest's `display: standalone` — it reads these meta
+  // tags instead. Without them, "Añadir a pantalla de inicio" gives you a
+  // bookmark that opens in Safari with its chrome, not an app.
+  appleWebApp: {
+    capable: true,
+    title: "Finanzas",
+    // Lets the app paint under the status bar, which is what `viewportFit:
+    // "cover"` below already assumes — the two have to agree or the safe-area
+    // insets resolve against a viewport iOS isn't actually giving us.
+    statusBarStyle: "black-translucent",
+  },
   openGraph: {
     title: "Finanzas Personales",
     description:
@@ -39,6 +50,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // The manifest can only carry one theme_color, but the system UI around an
+  // installed app should follow the user's scheme like the app itself does.
+  // These meta tags win over the manifest where they're supported.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8faf8" },
+    { media: "(prefers-color-scheme: dark)", color: "#171a19" },
+  ],
   // Lets the page paint under the notch and home indicator, which is what makes
   // `env(safe-area-inset-*)` resolve to real values instead of 0 — the Sidebar
   // and Navbar rely on those insets to keep controls out from under the OS
