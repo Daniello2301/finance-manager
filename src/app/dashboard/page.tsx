@@ -9,6 +9,7 @@ import { BudgetSummaryWidget } from "./components/BudgetSummaryWidget";
 import { DebtSummaryWidget } from "./components/DebtSummaryWidget";
 import { RecentTransactionsWidget } from "./components/RecentTransactionsWidget";
 import { EmptyDashboardState } from "./components/EmptyDashboardState";
+import { OverdrawnAlert } from "./components/OverdrawnAlert";
 
 type RecentActivityStatus = "loading" | "error" | "empty" | "data";
 
@@ -29,6 +30,11 @@ export default function DashboardPage() {
       <h1 className="font-display text-2xl font-semibold">
         Hola, {session?.user?.name}
       </h1>
+
+      {/* Above everything, and outside the "has any transactions" gate: an
+          overdrawn account is the one thing the user must not scroll past.
+          Renders nothing when there isn't one, which is almost always. */}
+      <OverdrawnAlert />
 
       {/* Outside the "has any transactions" gate on purpose: a debt registered
           before its first payment creates no transaction, so gating this would
