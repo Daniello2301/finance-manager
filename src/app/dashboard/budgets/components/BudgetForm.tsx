@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -23,6 +22,7 @@ import {
   createBudgetSchema,
   updateBudgetSchema,
 } from "@/lib/validation/budgets";
+import { useSeedForm } from "@/hooks/useSeedForm";
 import { useBudgetModalStore } from "@/stores/budgetModal.store";
 import {
   useBudgets,
@@ -68,33 +68,24 @@ export function BudgetForm({ period }: { period: string }) {
     ) as unknown as Resolver<BudgetFormValues>,
   });
 
-  // Tracks which budget (or "create") the form was last reset() for, so a
-  // background refetch of useBudgets while the modal is open — no staleTime
-  // is set on that query — doesn't silently wipe an in-progress edit. Only
-  // a real open/close cycle or switching to a different budget re-seeds it.
-  const initializedForRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) {
-      initializedForRef.current = null;
-      return;
-    }
-
-    const key = editingBudgetId ?? "create";
-    if (initializedForRef.current === key) return;
-
-    if (isEditing) {
-      if (!editingBudget) return;
-      reset({
-        categoryId: editingBudget.categoryId,
-        periodKey: editingBudget.periodKey,
-        limitAmount: editingBudget.limitAmount,
-      });
-    } else {
-      reset({ categoryId: "", periodKey: period, limitAmount: 0 });
-    }
-    initializedForRef.current = key;
-  }, [isOpen, isEditing, editingBudget, editingBudgetId, period, reset]);
+  useSeedForm({
+    isOpen,
+    target: editingBudgetId ?? "create",
+    ready: !isEditing || Boolean(editingBudget),
+    seed: () => {
+      if (editingBudget) {
+        reset({
+          categoryId: editingBudget.categoryId,
+          periodKey: editingBudget.periodKey,
+          limitAmount: editingBudget.limitAmount,
+        });
+      } else {
+        // periodKey is never rendered as an input — the page's MonthSelector is
+        // the single source of truth for which month this budget belongs to.
+        reset({ categoryId: "", periodKey: period, limitAmount: 0 });
+      }
+    },
+  });
 
   const onSubmit = async (values: BudgetFormValues) => {
     try {

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -27,6 +26,7 @@ import {
   createTransactionSchema,
   updateTransactionSchema,
 } from "@/lib/validation/transactions";
+import { useSeedForm } from "@/hooks/useSeedForm";
 import { isConfirmPending } from "@/stores/confirm.store";
 import { useTransactionModalStore } from "@/stores/transactionModal.store";
 import {
@@ -85,32 +85,35 @@ export function TransactionForm() {
 
   const selectedType = watch("type");
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (isEditing && editingTransaction) {
-      reset({
-        accountId: editingTransaction.accountId,
-        categoryId: editingTransaction.categoryId,
-        type: editingTransaction.type,
-        amount: fromMinorUnits(
-          editingTransaction.amount,
-          editingTransaction.currency
-        ),
-        date: editingTransaction.date.slice(0, 10),
-        description: editingTransaction.description ?? "",
-      });
-    } else if (!isEditing) {
-      reset({
-        accountId: "",
-        categoryId: "",
-        type: "expense",
-        amount: 0,
-        date: todayIsoDate(),
-        description: "",
-      });
-    }
-  }, [isOpen, isEditing, editingTransaction, reset]);
+  useSeedForm({
+    isOpen,
+    target: editingTransactionId ?? "create",
+    ready: !isEditing || Boolean(editingTransaction),
+    seed: () => {
+      if (isEditing && editingTransaction) {
+        reset({
+          accountId: editingTransaction.accountId,
+          categoryId: editingTransaction.categoryId,
+          type: editingTransaction.type,
+          amount: fromMinorUnits(
+            editingTransaction.amount,
+            editingTransaction.currency
+          ),
+          date: editingTransaction.date.slice(0, 10),
+          description: editingTransaction.description ?? "",
+        });
+      } else {
+        reset({
+          accountId: "",
+          categoryId: "",
+          type: "expense",
+          amount: 0,
+          date: todayIsoDate(),
+          description: "",
+        });
+      }
+    },
+  });
 
   const selectType = (type: "income" | "expense") => {
     setValue("type", type, { shouldValidate: true });

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import {
   Dialog,
@@ -21,6 +20,7 @@ import { toMinorUnits } from "@/lib/money";
 import { deriveMonthlyRate } from "@/lib/debt-math";
 import { useDebtModalStore } from "@/stores/debtModal.store";
 import { useCreateDebt, useDebts, useUpdateDebt } from "@/hooks/useDebts";
+import { useSeedForm } from "@/hooks/useSeedForm";
 
 /**
  * The form's rate field is a PERCENTAGE ("1.5" means 1.5% a month). Everything
@@ -83,24 +83,22 @@ export function DebtForm() {
     formState: { errors },
   } = useForm<DebtFormValues>({ defaultValues: EMPTY });
 
-  // Guarded against re-running on every background refetch of useDebts — an
-  // unguarded effect keyed on `editing` wipes whatever the user is typing the
-  // moment the query refreshes. (Same bug BudgetForm already had fixed.)
-  const initializedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!isOpen) {
-      initializedFor.current = null;
-      return;
-    }
-    const key = editingDebtId ?? "new";
-    if (initializedFor.current === key) return;
-
-    if (editing) {
+  useSeedForm({
+    isOpen,
+    target: editingDebtId ?? "create",
+    ready: !editingDebtId || Boolean(editing),
+    seed: () => {
+      if (!editing) {
+        reset(EMPTY);
+        return;
+      }
       const debt = editing.debt;
       reset({
         name: debt.name,
         creditor: debt.creditor ?? "",
         principal: debt.principal?.toString() ?? "",
+        // The %-to-fraction conversion lives in exactly one place (see onSubmit)
+        // — this is its inverse, and the only other place that may touch it.
         ratePercent:
           debt.monthlyRate !== undefined
             ? (debt.monthlyRate * PERCENT_TO_FRACTION).toString()
@@ -110,12 +108,8 @@ export function DebtForm() {
         accountNumber: debt.accountNumber ?? "",
         startDate: debt.startDate ? debt.startDate.slice(0, 10) : "",
       });
-      initializedFor.current = key;
-    } else if (!editingDebtId) {
-      reset(EMPTY);
-      initializedFor.current = key;
-    }
-  }, [isOpen, editingDebtId, editing, reset]);
+    },
+  });
 
   // Solve the rate live, so the user sees it appear the moment the three figures
   // that determine it are present. Runs in the browser — which is exactly why

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -30,6 +29,7 @@ import {
   useCreateAccount,
   useUpdateAccount,
 } from "@/hooks/useAccounts";
+import { useSeedForm } from "@/hooks/useSeedForm";
 
 const TYPE_OPTIONS = [
   { value: "bank", label: "Banco" },
@@ -79,19 +79,22 @@ export function AccountForm() {
 
   const selectedType = watch("type");
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (editingAccount) {
-      reset({
-        name: editingAccount.name,
-        type: editingAccount.type,
-        creditLimit: editingAccount.creditLimit,
-      });
-    } else {
-      reset({ name: "", type: "bank", initialBalance: 0 });
-    }
-  }, [isOpen, editingAccount, reset]);
+  useSeedForm({
+    isOpen,
+    target: editingAccountId ?? "create",
+    ready: !isEditing || Boolean(editingAccount),
+    seed: () => {
+      if (editingAccount) {
+        reset({
+          name: editingAccount.name,
+          type: editingAccount.type,
+          creditLimit: editingAccount.creditLimit,
+        });
+      } else {
+        reset({ name: "", type: "bank", initialBalance: 0 });
+      }
+    },
+  });
 
   const onSubmit = async (values: AccountFormValues) => {
     const creditLimitField =

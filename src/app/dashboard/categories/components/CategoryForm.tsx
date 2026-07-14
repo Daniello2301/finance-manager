@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -23,6 +22,7 @@ import {
   createCategorySchema,
   updateCategorySchema,
 } from "@/lib/validation/categories";
+import { useSeedForm } from "@/hooks/useSeedForm";
 import { useCategoryModalStore } from "@/stores/categoryModal.store";
 import {
   useCategories,
@@ -74,15 +74,18 @@ export function CategoryForm() {
     ) as Resolver<CategoryFormValues>,
   });
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (editingCategory) {
-      reset({ name: editingCategory.name, type: editingCategory.type });
-    } else {
-      reset({ name: "", type: "expense" });
-    }
-  }, [isOpen, editingCategory, reset]);
+  useSeedForm({
+    isOpen,
+    target: editingCategoryId ?? "create",
+    ready: !isEditing || Boolean(editingCategory),
+    seed: () => {
+      if (editingCategory) {
+        reset({ name: editingCategory.name, type: editingCategory.type });
+      } else {
+        reset({ name: "", type: "expense" });
+      }
+    },
+  });
 
   const onSubmit = async (values: CategoryFormValues) => {
     try {
