@@ -27,6 +27,7 @@ import {
   createTransactionSchema,
   updateTransactionSchema,
 } from "@/lib/validation/transactions";
+import { isConfirmPending } from "@/stores/confirm.store";
 import { useTransactionModalStore } from "@/stores/transactionModal.store";
 import {
   useCreateTransaction,
@@ -180,7 +181,14 @@ export function TransactionForm() {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && close()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Never close while a confirmation raised from inside this form is
+        // still awaiting an answer — see isConfirmPending.
+        if (!open && !isConfirmPending()) close();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>

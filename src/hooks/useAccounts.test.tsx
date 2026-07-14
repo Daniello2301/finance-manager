@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -9,6 +9,12 @@ import {
   useRecomputeBalance,
   useUpdateAccount,
 } from "@/hooks/useAccounts";
+import { toastManager } from "@/lib/notifications";
+
+// Spying on the real toast manager, rather than mocking `@/lib/notifications`,
+// exercises the whole chain: hook `onError` → notifyErrorFrom → notifyError →
+// the toast that actually reaches the viewport.
+let addToast: ReturnType<typeof vi.spyOn>;
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -48,8 +54,13 @@ function createWrapperWithClient() {
 }
 
 describe("useAccounts hooks", () => {
+  beforeEach(() => {
+    addToast = vi.spyOn(toastManager, "add");
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("useAccounts fetches the default (active-only) list", async () => {
@@ -214,5 +225,70 @@ describe("useAccounts hooks", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe("Datos inválidos");
+  });
+
+  // These mutations are fired from plain buttons, which have no field to show
+  // an inline error in. Before the toasts, every one of them failed in silence
+  // and the user was left believing the action had worked.
+  describe("button-fired mutations report their outcome", () => {
+    it("useArchiveAccount raises an error toast quoting the API's message", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          jsonResponse(409, { error: "La cuenta tiene transacciones." })
+        )
+      );
+
+      const { result } = renderHook(() => useArchiveAccount(), {
+        wrapper: createWrapper(),
+      });
+      result.current.mutate("1");
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(addToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "La cuenta tiene transacciones.",
+          type: "error",
+        })
+      );
+    });
+
+    it("useArchiveAccount falls back to a generic message when the failure carries none", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("")));
+
+      const { result } = renderHook(() => useArchiveAccount(), {
+        wrapper: createWrapper(),
+      });
+      result.current.mutate("1");
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(addToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "No se pudo archivar la cuenta.",
+          type: "error",
+        })
+      );
+    });
+
+    // Recomputing is idempotent — a correct balance looks identical to an
+    // untouched one — so success needs saying out loud or the button seems dead.
+    it("useRecomputeBalance raises a success toast", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          jsonResponse(200, { account: { _id: "1", currentBalance: 120000 } })
+        )
+      );
+
+      const { result } = renderHook(() => useRecomputeBalance(), {
+        wrapper: createWrapper(),
+      });
+      result.current.mutate("1");
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(addToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Saldo recalculado.", type: "success" })
+      );
+    });
   });
 });

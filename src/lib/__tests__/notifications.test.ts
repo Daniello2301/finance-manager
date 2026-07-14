@@ -1,89 +1,89 @@
-import { describe, expect, it, vi } from "vitest";
-import Swal from "sweetalert2";
-import { confirmAction, notifyError, notifySuccess } from "@/lib/notifications";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  confirmAction,
+  notifyError,
+  notifySuccess,
+  toastManager,
+} from "@/lib/notifications";
+import { useConfirmStore } from "@/stores/confirm.store";
 
-vi.mock("sweetalert2", () => ({
-  default: { fire: vi.fn() },
-}));
+afterEach(() => {
+  useConfirmStore.setState({ pending: null, resolve: null });
+  vi.restoreAllMocks();
+});
 
 describe("confirmAction", () => {
-  it("resolves true when the user confirms", async () => {
-    vi.mocked(Swal.fire).mockResolvedValueOnce({
-      isConfirmed: true,
-      isDenied: false,
-      isDismissed: false,
-    } as never);
+  it("raises a pending confirmation carrying the given options", () => {
+    void confirmAction({ title: "¿Eliminar?", text: "No se puede deshacer." });
 
-    const result = await confirmAction({ title: "¿Eliminar?" });
-    expect(result).toBe(true);
+    expect(useConfirmStore.getState().pending).toEqual({
+      title: "¿Eliminar?",
+      text: "No se puede deshacer.",
+    });
   });
 
-  it("resolves false when the user cancels", async () => {
-    vi.mocked(Swal.fire).mockResolvedValueOnce({
-      isConfirmed: false,
-      isDenied: false,
-      isDismissed: true,
-    } as never);
-
-    const result = await confirmAction({ title: "¿Eliminar?" });
-    expect(result).toBe(false);
+  it("resolves true when the confirmation is settled with true", async () => {
+    const result = confirmAction({ title: "¿Eliminar?" });
+    useConfirmStore.getState().settle(true);
+    await expect(result).resolves.toBe(true);
   });
 
-  it("uses default button texts when not provided", async () => {
-    vi.mocked(Swal.fire).mockResolvedValueOnce({
-      isConfirmed: true,
-      isDenied: false,
-      isDismissed: false,
-    } as never);
-
-    await confirmAction({ title: "¿Eliminar?" });
-
-    expect(Swal.fire).toHaveBeenCalledWith(
-      expect.objectContaining({
-        confirmButtonText: "Sí, continuar",
-        cancelButtonText: "Cancelar",
-      })
-    );
+  it("resolves false when the confirmation is settled with false", async () => {
+    const result = confirmAction({ title: "¿Eliminar?" });
+    useConfirmStore.getState().settle(false);
+    await expect(result).resolves.toBe(false);
   });
 
-  it("uses custom button texts when provided", async () => {
-    vi.mocked(Swal.fire).mockResolvedValueOnce({
-      isConfirmed: true,
-      isDenied: false,
-      isDismissed: false,
-    } as never);
-
-    await confirmAction({
+  it("passes custom button texts through to the pending confirmation", () => {
+    void confirmAction({
       title: "¿Eliminar?",
       confirmButtonText: "Eliminar",
       cancelButtonText: "No",
     });
 
-    expect(Swal.fire).toHaveBeenCalledWith(
-      expect.objectContaining({
-        confirmButtonText: "Eliminar",
-        cancelButtonText: "No",
-      })
-    );
+    expect(useConfirmStore.getState().pending).toMatchObject({
+      confirmButtonText: "Eliminar",
+      cancelButtonText: "No",
+    });
   });
 });
 
 describe("notifySuccess", () => {
-  it("fires a success alert with the given message", () => {
-    vi.mocked(Swal.fire).mockResolvedValueOnce({} as never);
+  it("adds a success toast with the given message", () => {
+    const add = vi.spyOn(toastManager, "add");
     notifySuccess("Guardado");
-    expect(Swal.fire).toHaveBeenCalledWith(
-      expect.objectContaining({ icon: "success", title: "Guardado" })
+
+    expect(add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Guardado", type: "success" })
     );
+  });
+
+  it("auto-dismisses", () => {
+    const add = vi.spyOn(toastManager, "add");
+    notifySuccess("Guardado");
+
+    const [options] = add.mock.calls[0];
+    expect(options.timeout).toBeGreaterThan(0);
   });
 });
 
 describe("notifyError", () => {
-  it("fires an error alert with the given message", () => {
-    vi.mocked(Swal.fire).mockResolvedValueOnce({} as never);
+  it("adds an error toast with the given message", () => {
+    const add = vi.spyOn(toastManager, "add");
     notifyError("Algo falló");
-    expect(Swal.fire).toHaveBeenCalledWith(
-      expect.objectContaining({ icon: "error", title: "Algo falló" })
+
+    expect(add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Algo falló", type: "error" })
     );
+  });
+
+  // An error is the user's only account of why their action failed — losing it
+  // to a timer while they looked away would be worse than no toast at all.
+  it("does not auto-dismiss", () => {
+    const add = vi.spyOn(toastManager, "add");
+    notifyError("Algo falló");
+
+    const [options] = add.mock.calls[0];
+    expect(options.timeout).toBe(0);
   });
 });

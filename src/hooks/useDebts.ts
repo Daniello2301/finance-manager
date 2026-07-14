@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseJsonOrThrow } from "@/lib/api-client";
+import { notifyErrorFrom } from "@/lib/notifications";
 import type {
   CreateDebtInput,
   CreateDebtPaymentInput,
@@ -153,6 +154,7 @@ export function useArchiveDebt() {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
+    onError: (error) => notifyErrorFrom(error, "No se pudo archivar la deuda."),
   });
 }
 
@@ -172,6 +174,8 @@ export function useUnarchiveDebt() {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo desarchivar la deuda."),
   });
 }
 

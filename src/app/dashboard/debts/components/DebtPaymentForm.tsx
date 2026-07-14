@@ -22,6 +22,7 @@ import { CategorySelect } from "@/components/CategorySelect";
 import { formatMoney, toMinorUnits } from "@/lib/money";
 import { isInsufficientFunds } from "@/lib/api-client";
 import { confirmAction } from "@/lib/notifications";
+import { isConfirmPending } from "@/stores/confirm.store";
 import { useDebtModalStore } from "@/stores/debtModal.store";
 import { useDebts, usePayDebt } from "@/hooks/useDebts";
 
@@ -134,7 +135,11 @@ export function DebtPaymentForm() {
   return (
     <Dialog
       open={Boolean(payingDebtId)}
-      onOpenChange={(open) => !open && close()}
+      onOpenChange={(open) => {
+        // Never close while a confirmation raised from inside this form is
+        // still awaiting an answer — see isConfirmPending.
+        if (!open && !isConfirmPending()) close();
+      }}
     >
       <DialogContent>
         <DialogHeader>

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseJsonOrThrow } from "@/lib/api-client";
+import { notifyErrorFrom, notifySuccess } from "@/lib/notifications";
 import type {
   CreateAccountInput,
   UpdateAccountInput,
@@ -89,6 +90,8 @@ export function useArchiveAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo archivar la cuenta."),
   });
 }
 
@@ -109,6 +112,8 @@ export function useUnarchiveAccount() {
       // An unarchived account is counted in the balance summary again.
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo desarchivar la cuenta."),
   });
 }
 
@@ -128,6 +133,11 @@ export function useRecomputeBalance() {
       // too — without this, a just-recomputed balance still shows stale on
       // /dashboard until the summary query's staleTime elapses.
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // Recomputing is idempotent: a correct balance looks exactly like an
+      // untouched one, so without this the button gives no sign it ever ran.
+      notifySuccess("Saldo recalculado.");
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo recalcular el saldo."),
   });
 }

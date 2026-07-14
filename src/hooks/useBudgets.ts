@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseJsonOrThrow } from "@/lib/api-client";
+import { notifyErrorFrom, notifySuccess } from "@/lib/notifications";
 import type {
   CreateBudgetInput,
   UpdateBudgetInput,
@@ -98,7 +99,10 @@ export function useDeleteBudget() {
       // edit here that doesn't refresh that cache would show stale data on
       // /dashboard for up to its staleTime window.
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      notifySuccess("Presupuesto eliminado.");
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo eliminar el presupuesto."),
   });
 }
 

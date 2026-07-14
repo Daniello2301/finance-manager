@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseJsonOrThrow } from "@/lib/api-client";
+import { notifyErrorFrom, notifySuccess } from "@/lib/notifications";
 import type {
   CreateTransactionInput,
   UpdateTransactionInput,
@@ -136,6 +137,9 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      notifySuccess("Transacción eliminada.");
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo eliminar la transacción."),
   });
 }

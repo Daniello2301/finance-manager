@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseJsonOrThrow } from "@/lib/api-client";
+import { notifyErrorFrom } from "@/lib/notifications";
 import type {
   CreateCategoryInput,
   UpdateCategoryInput,
@@ -97,6 +98,8 @@ export function useArchiveCategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo archivar la categoría."),
   });
 }
 
@@ -115,5 +118,7 @@ export function useUnarchiveCategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
+    onError: (error) =>
+      notifyErrorFrom(error, "No se pudo desarchivar la categoría."),
   });
 }
