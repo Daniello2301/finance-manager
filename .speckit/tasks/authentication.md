@@ -221,8 +221,8 @@ Decision Log; reglas en FR-015..FR-018 de la spec.
 | [T085] | `GoogleButton` (5 tests) en login y signup, con el mensaje de la denegación: NextAuth devuelve a `/login?error=AccessDenied` y sin esto la refusal se traga en silencio | - | ✅ |
 | [T086] | El botón **no se pinta** si faltan `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (leído en el Server Component; solo cruza el booleano). Un botón visible que no puede funcionar es peor que ninguno, y desacopla desplegar de configurar | - | ✅ |
 | [T087] | Gates: type-check, lint, suite completa, build | - | ✅ |
-| [T088] | Credenciales en Google Cloud Console + env vars en `.env.local` y Vercel (**del dueño**) | - | ⬜ |
-| [T089] | Click-through real en navegador, **sobre todo la vinculación con la cuenta existente del dueño** (FR-016). OAuth exige un redirect real a Google: no se puede conducir con curl, y Playwright se cuelga en este entorno | - | ⬜ |
+| [T088] | Credenciales en Google Cloud Console + env vars en `.env.local` y Vercel. Hecho por el dueño (2026-07-16). Verificado: `/api/auth/providers` **lista `google` en producción** | - | ✅ |
+| [T089] | Click-through real en navegador (dev): `signin/google` → `callback/google` **302** → `/dashboard` 200. **FR-016 verificado contra la BD, no de vista**: la cuenta del dueño (creada 2026-07-10) quedó con contraseña **Y** `googleId`, conservando sus 3 cuentas, 9 transacciones y 4 deudas — entró a SU cuenta, no a una nueva, y la contraseña le sigue sirviendo. **FR-015 verificado de paso**: una cuenta solo-Google creada el mismo día salió con sus **21 categorías sembradas** | - | ✅ |
 
 ---
 
@@ -231,8 +231,8 @@ Decision Log; reglas en FR-015..FR-018 de la spec.
 - **[T001 Blocker]**: NEXTAUTH_SECRET and MONGODB_URI must be set or other tasks blocked
 - **[T002 Blocker]**: If MongoDB doesn't connect, all DB tasks blocked
 - **[T020 Blocker]**: NextAuth config must be complete before API routes work
-- **[T088/T089 Blocker]**: sin las credenciales de Google no hay flujo que probar. El código está
-  listo y el botón permanece oculto hasta que existan, así que no bloquea nada más
+- ~~**[T088/T089 Blocker]**: sin las credenciales de Google no hay flujo que probar~~ → **RESUELTO
+  2026-07-16**: credenciales puestas, flujo probado en navegador y vinculación verificada contra la BD.
 
 ---
 
