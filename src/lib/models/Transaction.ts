@@ -44,6 +44,13 @@ export interface ITransaction extends Document {
   transferId?: Types.ObjectId;
   /** A deferred card purchase: how many instalments the statement splits it into. */
   installmentCount?: number;
+  /**
+   * Which occurrence of a recurring template this materialised (`"2026-07-20"`).
+   * The key to idempotency: it is NOT `date` (the user can edit a transaction's
+   * date afterwards, which would change the key and let a second pass duplicate
+   * it). Immutable, and only ever set alongside `recurringTransactionId`.
+   */
+  recurringOccurrenceKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,12 +88,15 @@ const transactionSchema = new Schema<ITransaction, ITransactionModel>(
     currency: { type: String, required: true, immutable: true },
     date: { type: Date, required: true },
     description: { type: String, trim: true, maxlength: 200 },
-    // Unused in Fase 1 — reserved for Gastos Recurrentes / Metas de Ahorro
-    // (Fase 2). No index, not exposed by any Zod schema or route.
+    // Set when this transaction was materialised from a recurring template
+    // (Fase 2). Never client-supplied — the recurring service sets it.
     recurringTransactionId: {
       type: Schema.Types.ObjectId,
       ref: "RecurringTransaction",
     },
+    // The specific occurrence this materialised. Immutable (see the interface):
+    // editing the transaction's date must not move the idempotency key.
+    recurringOccurrenceKey: { type: String, immutable: true },
     savingsGoalId: { type: Schema.Types.ObjectId, ref: "SavingsGoal" },
     // Set when this expense is a payment towards a Debt. A debt payment is a
     // real transaction — the money genuinely leaves an account — so it moves the
@@ -118,6 +128,19 @@ transactionSchema.index({ userId: 1, transferId: 1 });
 transactionSchema.index({ userId: 1, accountId: 1, date: -1 });
 transactionSchema.index({ userId: 1, categoryId: 1, date: -1 });
 transactionSchema.index({ userId: 1, type: 1, date: -1 });
+// Idempotency for recurring materialisation (FR-006): a given occurrence of a
+// given template can exist at most once. Partial, so it constrains ONLY the
+// transactions born from a recurring template — every ordinary transaction has
+// no recurringTransactionId and is left entirely unaffected.
+transactionSchema.index(
+  { userId: 1, recurringTransactionId: 1, recurringOccurrenceKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      recurringTransactionId: { $exists: true },
+    },
+  }
+);
 
 transactionSchema.statics.findForUser = function (
   this: ITransactionModel,

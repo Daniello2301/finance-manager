@@ -129,7 +129,7 @@ Como usuario, quiero decir que un recurrente termina en tal fecha (una cuota a 1
 - **FR-009** — Con `endDate`, no se generan vencimientos posteriores a esa fecha; al pasarla, el recurrente se considera terminado.
 - **FR-010** — DELETE **archiva** (`isArchived`), nunca borra: las transacciones que ya generó son historial real y no pueden quedar colgando.
 - **FR-011** — Todas las fechas se calculan en **UTC**, igual que `src/lib/period.ts` y `debt-math.ts`. Un vencimiento no puede depender de la zona horaria del servidor.
-- **FR-012** — La generación automática invoca `createTransaction()` con `confirmOverdraft: true` (ver decisión 3).
+- **FR-012** — La generación automática invoca `createTransaction()` de modo que un sobregiro se **registra igual** (ver decisión 3). ~~`confirmOverdraft: true`~~ **[Corregido 2026-07-15]**: `confirmOverdraft` fue derogado el 2026-07-14 (Saldos Honestos). El mecanismo es ahora una bandera de servicio **`allowOverdraft`** que **solo** activa el generador automático y que **ninguna ruta HTTP expone**. La cuenta queda en descubierto (saldo negativo derivado), sin diálogo. Un recurrente **manual** que sobregira NO usa esta bandera: pasa por la creación normal y recibe el diálogo de las cuatro salidas. Ratificado en el Decision Log de la constitución (2026-07-15).
 
 ---
 

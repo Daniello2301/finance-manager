@@ -10,6 +10,8 @@ import { DebtSummaryWidget } from "./components/DebtSummaryWidget";
 import { RecentTransactionsWidget } from "./components/RecentTransactionsWidget";
 import { EmptyDashboardState } from "./components/EmptyDashboardState";
 import { OverdrawnAlert } from "./components/OverdrawnAlert";
+import { UpcomingRecurringWidget } from "./components/UpcomingRecurringWidget";
+import { PendingConfirmations } from "./recurring/components/PendingConfirmations";
 
 type RecentActivityStatus = "loading" | "error" | "empty" | "data";
 
@@ -36,6 +38,11 @@ export default function DashboardPage() {
           Renders nothing when there isn't one, which is almost always. */}
       <OverdrawnAlert />
 
+      {/* Manual recurrentes that have come due — actionable, and outside the
+          transaction gate: a pending payment matters even before any spending
+          has been recorded. Renders nothing when there's nothing to confirm. */}
+      <PendingConfirmations />
+
       {/* Outside the "has any transactions" gate on purpose: a debt registered
           before its first payment creates no transaction, so gating this would
           make a freshly-added debt invisible on the dashboard. And "what I owe"
@@ -44,6 +51,11 @@ export default function DashboardPage() {
         <BalanceSummaryCard />
         <DebtSummaryWidget />
       </div>
+
+      {/* Always mounted (not gated): it fires the catch-up sweep on load, which
+          is what keeps automatic charges materialised. Renders nothing when
+          there's nothing due soon. */}
+      <UpcomingRecurringWidget />
 
       {status === "error" && (
         <p className="text-destructive">

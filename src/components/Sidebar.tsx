@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Menu,
   PiggyBank,
+  Repeat,
   Tags,
   Wallet,
   X,
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   },
   { href: "/dashboard/budgets", label: "Presupuestos", icon: PiggyBank },
   { href: "/dashboard/debts", label: "Deudas", icon: Landmark },
+  { href: "/dashboard/recurring", label: "Recurrentes", icon: Repeat },
 ] as const;
 
 function SidebarNav({

@@ -54,6 +54,8 @@ export interface CreateTransactionServiceInput {
   date: Date;
   description?: string;
   recurringTransactionId?: string;
+  /** Which occurrence of a recurring template this materialises — the idempotency key. */
+  recurringOccurrenceKey?: string;
   savingsGoalId?: string;
   /** Set when this expense is a payment towards a Debt. */
   debtId?: string;
@@ -75,18 +77,35 @@ export interface UpdateTransactionServiceInput {
 }
 
 /**
+ * Options for the create path.
+ *
+ * `allowOverdraft` skips the funds check. It exists for exactly one caller: the
+ * automatic recurring generator, materialising a charge the bank has ALREADY
+ * made (`autoGenerate: true`). That is a consummated fact, not a decision — and
+ * a fact that overdraws is recorded and leaves the account overdrawn, per the
+ * ratified rule (2026-07-15), because refusing to write it would only show a
+ * balance *more* false than the real one. It is a SERVICE argument, never read
+ * from an HTTP body — no route exposes it, so it cannot reopen the overdraft
+ * escape that `confirmOverdraft` was (rightly) removed to close.
+ */
+export interface CreateTransactionOptions {
+  allowOverdraft?: boolean;
+}
+
+/**
  * The body of createTransaction, minus the transaction management.
  *
  * Exists so a caller that is ALREADY inside a `session.withTransaction` can
  * reuse it — a transfer writes two of these (one out, one in) and they have to
  * commit or fail together, because half a transfer is money destroyed. Mongo
  * won't nest `withTransaction`, so the session has to be threaded in rather than
- * started again here. Recurrentes will want the same thing.
+ * started again here. The recurring generator uses it too.
  */
 export async function createTransactionInSession(
   userId: string,
   input: CreateTransactionServiceInput,
-  session: mongoose.ClientSession
+  session: mongoose.ClientSession,
+  options: CreateTransactionOptions = {}
 ): Promise<ITransaction> {
   const delta = signedDelta(input.type, input.amount);
 
@@ -98,9 +117,11 @@ export async function createTransactionInSession(
   if (!account) {
     throw new NotFoundError("La cuenta no existe o no te pertenece");
   }
-  // Creation is a decision, and this is where it gets stopped. There is no
-  // override — the caller must instead say where the money came from.
-  assertSufficientFunds(account, delta);
+  // Creation is a decision, and this is where it gets stopped — unless the
+  // caller is recording a consummated fact (see CreateTransactionOptions).
+  if (!options.allowOverdraft) {
+    assertSufficientFunds(account, delta);
+  }
 
   const [tx] = await Transaction.create(
     [{ ...input, userId, currency: account.currency }],
@@ -117,13 +138,14 @@ export async function createTransactionInSession(
  */
 export async function createTransaction(
   userId: string,
-  input: CreateTransactionServiceInput
+  input: CreateTransactionServiceInput,
+  options: CreateTransactionOptions = {}
 ): Promise<ITransaction> {
   await connectDB();
   const session = await mongoose.startSession();
   try {
     return await session.withTransaction(() =>
-      createTransactionInSession(userId, input, session)
+      createTransactionInSession(userId, input, session, options)
     );
   } finally {
     await session.endSession();

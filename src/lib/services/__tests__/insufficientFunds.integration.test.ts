@@ -132,6 +132,34 @@ describe("transactions service — insufficient funds", () => {
     expect(await Transaction.countDocuments({ userId })).toBe(0);
   });
 
+  // The automatic recurring generator records a charge the bank has ALREADY
+  // made: a consummated fact, not a decision. It passes `allowOverdraft`, and a
+  // fact that overdraws is written down, leaving the account in the red (ratified
+  // 2026-07-15). This is NOT the old `confirmOverdraft` escape — the flag is a
+  // service argument no HTTP route exposes, so a user can't force a decision.
+  it("records an overdrawing charge when the caller says it is a consummated fact", async () => {
+    const accountId = await seedCash(100000);
+    const categoryId = await seedCategory();
+
+    const tx = await createTransaction(
+      userId,
+      {
+        accountId,
+        categoryId,
+        type: "expense",
+        amount: 300000,
+        date: new Date("2026-07-13"),
+      },
+      { allowOverdraft: true }
+    );
+    expect(tx).toBeTruthy();
+
+    // Written down, and the account is left overdrawn on purpose.
+    const account = await Account.findById(accountId);
+    expect(account?.currentBalance).toBe(-200000);
+    expect(await Transaction.countDocuments({ userId })).toBe(1);
+  });
+
   // The other side of the same rule. A transaction that already exists is money
   // that already moved: correcting it is fixing the record of a fact, not
   // deciding to spend. Blocking it would lock the user inside their own typo —
