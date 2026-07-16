@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# OAuth credential files as downloaded from Google Cloud Console. They carry the
+# client secret in the clear, and land in the repo root with whatever name the
+# console gives them — which `git add -A` will happily sweep up.
+client_secret*.json
+
 # vercel
 .vercel
 
@@ -42,3 +47,5 @@ next-env.d.ts
 
 .vercel
 .env*
+
+client_secret_google-aoth.json

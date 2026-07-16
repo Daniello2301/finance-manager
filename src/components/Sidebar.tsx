@@ -82,7 +82,10 @@ function SidebarFooter({ name }: { name?: string | null }) {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => signOut({ callbackUrl: "/login" })}
+        // Back to the welcome page, not the login form: logging out is leaving,
+        // not a step towards logging in again. The landing page sends you on to
+        // /dashboard by itself if a session ever comes back.
+        onClick={() => signOut({ callbackUrl: "/" })}
       >
         Cerrar sesión
       </Button>

@@ -64,13 +64,13 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Ana").length).toBeGreaterThan(0);
   });
 
-  it("calls signOut when 'Cerrar sesión' is clicked", async () => {
+  it("signs out back to the welcome page, not the login form", async () => {
     const user = userEvent.setup();
     render(<Sidebar />);
     await user.click(
       screen.getAllByRole("button", { name: /cerrar sesión/i })[0]
     );
-    expect(signOut).toHaveBeenCalledWith({ callbackUrl: "/login" });
+    expect(signOut).toHaveBeenCalledWith({ callbackUrl: "/" });
   });
 
   it("renders the mobile drawer as an accessible dialog with a proper name", async () => {

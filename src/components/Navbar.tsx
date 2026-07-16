@@ -30,7 +30,9 @@ export function Navbar() {
             </span>
             <Button
               variant="outline"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              // See Sidebar: logging out lands on the welcome page, not the
+              // login form.
+              onClick={() => signOut({ callbackUrl: "/" })}
             >
               Cerrar sesión
             </Button>

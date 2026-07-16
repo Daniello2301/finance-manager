@@ -56,6 +56,6 @@ describe("Navbar", () => {
 
     expect(screen.getByText("Ana Pérez")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /cerrar sesión/i }));
-    expect(signOut).toHaveBeenCalledWith({ callbackUrl: "/login" });
+    expect(signOut).toHaveBeenCalledWith({ callbackUrl: "/" });
   });
 });
