@@ -14,6 +14,9 @@ vi.mock("@/hooks/useAccounts", () => ({
   useArchiveAccount: vi.fn(),
   useUnarchiveAccount: vi.fn(),
   useRecomputeBalance: vi.fn(),
+  // The card renders its statement (what to pay, and by when) — a different
+  // number from the balance. Covered on its own in CardStatement.test.tsx.
+  useStatement: () => ({ data: undefined, isLoading: false }),
 }));
 
 vi.mock("@/stores/accountModal.store", () => ({

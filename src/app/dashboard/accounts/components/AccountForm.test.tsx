@@ -139,6 +139,45 @@ describe("AccountForm", () => {
     expect(close).toHaveBeenCalled();
   });
 
+  // An empty number input read with `valueAsNumber` yields NaN, and NaN IS a
+  // number — so Zod's `.optional()` doesn't save you and `.int()` rejects it.
+  // The form then refuses to submit, with an error on a field the user chose to
+  // leave blank. This is what made a credit card with no billing cycle (the
+  // owner's, today) impossible to save.
+  it("saves a card whose optional number fields are left blank", async () => {
+    const { close } = mockStore({ isOpen: true, editingAccountId: "acc-1" });
+    const user = userEvent.setup();
+    render(<AccountForm />);
+
+    // The card has no cycle: both day fields render empty.
+    expect(screen.getByLabelText(/día de corte/i)).toHaveValue(null);
+    expect(screen.getByLabelText(/día de pago/i)).toHaveValue(null);
+
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
+    const { input } = updateMutateAsync.mock.calls[0][0];
+    // Left blank means absent, not NaN and not zero.
+    expect(input).not.toHaveProperty("statementDay");
+    expect(input).not.toHaveProperty("paymentDay");
+    expect(close).toHaveBeenCalled();
+  });
+
+  it("saves the billing cycle when both days are given", async () => {
+    mockStore({ isOpen: true, editingAccountId: "acc-1" });
+    const user = userEvent.setup();
+    render(<AccountForm />);
+
+    await user.type(screen.getByLabelText(/día de corte/i), "20");
+    await user.type(screen.getByLabelText(/día de pago/i), "5");
+    await user.click(screen.getByRole("button", { name: /guardar/i }));
+
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
+    const { input } = updateMutateAsync.mock.calls[0][0];
+    expect(input.statementDay).toBe(20);
+    expect(input.paymentDay).toBe(5);
+  });
+
   it("shows a root error and does not close when the mutation fails", async () => {
     const { close } = mockStore({ isOpen: true, editingAccountId: null });
     createMutateAsync.mockRejectedValueOnce(new Error("Falló la creación"));

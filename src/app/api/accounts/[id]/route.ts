@@ -76,6 +76,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         "creditLimit solo aplica a cuentas tipo tarjeta de crédito"
       );
     }
+    // FR-006: same effective-type guard as creditLimit — the billing cycle
+    // days only mean anything on a credit card, and the partial update schema
+    // has no cross-field .refine to catch them (a `{ statementDay }` PATCH has
+    // no `type` for Zod to check against).
+    if (
+      (parsed.data.statementDay !== undefined ||
+        parsed.data.paymentDay !== undefined) &&
+      effectiveType !== "credit_card"
+    ) {
+      throw new ValidationError(
+        "El ciclo de facturación solo aplica a cuentas tipo tarjeta de crédito"
+      );
+    }
 
     const updated = await Account.findOneAndUpdate(
       { _id: id, userId: session.user.id },

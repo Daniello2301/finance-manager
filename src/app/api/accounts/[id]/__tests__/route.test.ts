@@ -169,6 +169,45 @@ describe("/api/accounts/[id]", () => {
       expect(body.account.creditLimit).toBe(1000000);
     });
 
+    it("rejects statementDay/paymentDay when the stored account isn't a credit_card", async () => {
+      const account = await Account.create({
+        userId,
+        name: "Ahorros",
+        type: "bank",
+        initialBalance: 0,
+        currentBalance: 0,
+      });
+
+      const res = await PATCH(
+        makeRequest("PATCH", { statementDay: 20 }),
+        withParams(account.id)
+      );
+      expect(res.status).toBe(422);
+
+      // Nothing was persisted — the guard runs before the write.
+      const stored = await Account.findById(account.id);
+      expect(stored?.statementDay).toBeUndefined();
+    });
+
+    it("accepts the billing cycle days when the stored account is a credit_card", async () => {
+      const account = await Account.create({
+        userId,
+        name: "Tarjeta",
+        type: "credit_card",
+        initialBalance: 0,
+        currentBalance: 0,
+      });
+
+      const res = await PATCH(
+        makeRequest("PATCH", { statementDay: 20, paymentDay: 5 }),
+        withParams(account.id)
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.account.statementDay).toBe(20);
+      expect(body.account.paymentDay).toBe(5);
+    });
+
     it("returns 404 for another user's account", async () => {
       const account = await Account.create({
         userId: otherUserId,

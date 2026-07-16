@@ -8,6 +8,8 @@ vi.mock("@/hooks/useAccounts", () => ({
   useArchiveAccount: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useUnarchiveAccount: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useRecomputeBalance: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  // AccountCard renders the card's statement; it has its own tests.
+  useStatement: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));
 
 vi.mock("@/stores/accountModal.store", () => ({

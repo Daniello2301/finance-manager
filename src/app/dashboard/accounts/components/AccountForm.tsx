@@ -37,11 +37,26 @@ const TYPE_OPTIONS = [
   { value: "credit_card", label: "Tarjeta de crédito" },
 ] as const;
 
+/**
+ * An empty number input, read with `valueAsNumber`, yields NaN — not undefined.
+ * NaN is a number, so Zod's `.optional()` doesn't save you: `.int()` rejects it
+ * and the form refuses to submit, with an error on a field the user deliberately
+ * left blank. That's what made a credit card with no credit limit unsavable, and
+ * it would have done the same to every card that has no billing cycle.
+ */
+function optionalNumber(value: unknown): number | undefined {
+  if (value === "" || value === null || value === undefined) return undefined;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
 interface AccountFormValues {
   name: string;
   type: "bank" | "cash" | "credit_card";
   initialBalance?: number;
   creditLimit?: number;
+  statementDay?: number;
+  paymentDay?: number;
 }
 
 export function AccountForm() {
@@ -89,6 +104,8 @@ export function AccountForm() {
           name: editingAccount.name,
           type: editingAccount.type,
           creditLimit: editingAccount.creditLimit,
+          statementDay: editingAccount.statementDay,
+          paymentDay: editingAccount.paymentDay,
         });
       } else {
         reset({ name: "", type: "bank", initialBalance: 0 });
@@ -102,11 +119,26 @@ export function AccountForm() {
         ? { creditLimit: toMinorUnits(values.creditLimit, "COP") }
         : {};
 
+    // Both days or neither: one alone yields no cycle, and half a cycle would
+    // let the app show a close date with no payment deadline, which is worse
+    // than showing nothing.
+    const cycleFields =
+      selectedType === "credit_card" &&
+      values.statementDay !== undefined &&
+      values.paymentDay !== undefined
+        ? { statementDay: values.statementDay, paymentDay: values.paymentDay }
+        : {};
+
     try {
       if (isEditing && editingAccountId) {
         await updateAccount.mutateAsync({
           id: editingAccountId,
-          input: { name: values.name, type: values.type, ...creditLimitField },
+          input: {
+            name: values.name,
+            type: values.type,
+            ...creditLimitField,
+            ...cycleFields,
+          },
         });
       } else {
         await createAccount.mutateAsync({
@@ -115,6 +147,7 @@ export function AccountForm() {
           currency: "COP",
           initialBalance: toMinorUnits(values.initialBalance ?? 0, "COP"),
           ...creditLimitField,
+          ...cycleFields,
         });
       }
       close();
@@ -197,10 +230,53 @@ export function AccountForm() {
                   type="number"
                   inputMode="decimal"
                   aria-invalid={!!errors.creditLimit}
-                  {...register("creditLimit", { valueAsNumber: true })}
+                  {...register("creditLimit", { setValueAs: optionalNumber })}
                 />
                 <FieldError errors={[errors.creditLimit]} />
               </Field>
+            )}
+
+            {selectedType === "credit_card" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field data-invalid={!!errors.statementDay}>
+                    <FieldLabel htmlFor="account-statement-day">
+                      Día de corte
+                    </FieldLabel>
+                    <Input
+                      id="account-statement-day"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={31}
+                      aria-invalid={!!errors.statementDay}
+                      {...register("statementDay", {
+                        setValueAs: optionalNumber,
+                      })}
+                    />
+                    <FieldError errors={[errors.statementDay]} />
+                  </Field>
+                  <Field data-invalid={!!errors.paymentDay}>
+                    <FieldLabel htmlFor="account-payment-day">
+                      Día de pago
+                    </FieldLabel>
+                    <Input
+                      id="account-payment-day"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={31}
+                      aria-invalid={!!errors.paymentDay}
+                      {...register("paymentDay", { setValueAs: optionalNumber })}
+                    />
+                    <FieldError errors={[errors.paymentDay]} />
+                  </Field>
+                </div>
+                <p className="-mt-1 text-xs text-muted-foreground">
+                  Están en tu extracto. Sin los dos, la app no puede decirte
+                  cuánto pagar ni hasta cuándo — y no se lo va a inventar.
+                </p>
+              </>
             )}
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

@@ -8,6 +8,16 @@ const baseTransactionSchema = z.object({
   amount: z.number().int().positive("El monto debe ser un entero positivo"),
   date: z.coerce.date(),
   description: z.string().max(200).optional(),
+  // A deferred card purchase. It does NOT create a Debt: the card is debited in
+  // full (your credit limit really does drop by the whole amount), and this
+  // number only changes what each statement demands. A Debt as well would count
+  // the same money twice — see .speckit/specs/credit-card.md.
+  installmentCount: z
+    .number()
+    .int("El número de cuotas debe ser un entero")
+    .min(2, "Diferir a cuotas requiere al menos 2")
+    .max(48)
+    .optional(),
 });
 
 // No `confirmOverdraft`. It was removed (ratified 2026-07-14): an expense that

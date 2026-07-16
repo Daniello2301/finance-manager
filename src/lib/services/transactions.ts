@@ -57,8 +57,12 @@ export interface CreateTransactionServiceInput {
   savingsGoalId?: string;
   /** Set when this expense is a payment towards a Debt. */
   debtId?: string;
-  /** Marks an income that isn't earnings — see TransactionOrigin. */
+  /** Marks a movement that isn't earnings or spending — see TransactionOrigin. */
   origin?: TransactionOrigin;
+  /** Links the two legs of a transfer. */
+  transferId?: mongoose.Types.ObjectId;
+  /** A deferred card purchase: how many instalments the statement splits it into. */
+  installmentCount?: number;
 }
 
 export interface UpdateTransactionServiceInput {
@@ -68,6 +72,41 @@ export interface UpdateTransactionServiceInput {
   amount?: number;
   date?: Date;
   description?: string;
+}
+
+/**
+ * The body of createTransaction, minus the transaction management.
+ *
+ * Exists so a caller that is ALREADY inside a `session.withTransaction` can
+ * reuse it — a transfer writes two of these (one out, one in) and they have to
+ * commit or fail together, because half a transfer is money destroyed. Mongo
+ * won't nest `withTransaction`, so the session has to be threaded in rather than
+ * started again here. Recurrentes will want the same thing.
+ */
+export async function createTransactionInSession(
+  userId: string,
+  input: CreateTransactionServiceInput,
+  session: mongoose.ClientSession
+): Promise<ITransaction> {
+  const delta = signedDelta(input.type, input.amount);
+
+  const account = await Account.findOneAndUpdate(
+    { _id: input.accountId, userId },
+    { $inc: { currentBalance: delta } },
+    { session, returnDocument: "after" }
+  );
+  if (!account) {
+    throw new NotFoundError("La cuenta no existe o no te pertenece");
+  }
+  // Creation is a decision, and this is where it gets stopped. There is no
+  // override — the caller must instead say where the money came from.
+  assertSufficientFunds(account, delta);
+
+  const [tx] = await Transaction.create(
+    [{ ...input, userId, currency: account.currency }],
+    { session }
+  );
+  return tx;
 }
 
 /**
@@ -83,28 +122,9 @@ export async function createTransaction(
   await connectDB();
   const session = await mongoose.startSession();
   try {
-    return await session.withTransaction(async () => {
-      const fields = input;
-      const delta = signedDelta(fields.type, fields.amount);
-
-      const account = await Account.findOneAndUpdate(
-        { _id: fields.accountId, userId },
-        { $inc: { currentBalance: delta } },
-        { session, returnDocument: "after" }
-      );
-      if (!account) {
-        throw new NotFoundError("La cuenta no existe o no te pertenece");
-      }
-      // Creation is a decision, and this is where it gets stopped. There is no
-      // override — the caller must instead say where the money came from.
-      assertSufficientFunds(account, delta);
-
-      const [tx] = await Transaction.create(
-        [{ ...fields, userId, currency: account.currency }],
-        { session }
-      );
-      return tx;
-    });
+    return await session.withTransaction(() =>
+      createTransactionInSession(userId, input, session)
+    );
   } finally {
     await session.endSession();
   }

@@ -17,11 +17,46 @@ export interface Account {
   initialBalance: number;
   currentBalance: number;
   creditLimit?: number;
+  statementDay?: number;
+  paymentDay?: number;
   color?: string;
   icon?: string;
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Statement {
+  currentBalance: number;
+  amountDue: number;
+  due: string;
+  close: string;
+  nextClose: string;
+  nextDue: string;
+  currency: string;
+}
+
+/**
+ * What a card demands by when — a different number from what it owes in total.
+ *
+ * Only asked for when the card has both cycle days: without them there is no
+ * cycle, and the API says so rather than estimating one.
+ */
+export function useStatement(account: Account | null) {
+  const enabled =
+    account?.type === "credit_card" &&
+    account.statementDay !== undefined &&
+    account.paymentDay !== undefined;
+
+  return useQuery({
+    queryKey: ["accounts", account?._id, "statement"],
+    enabled,
+    queryFn: async (): Promise<Statement> => {
+      const res = await fetch(`/api/accounts/${account!._id}/statement`);
+      const body = await parseJsonOrThrow(res);
+      return body.statement;
+    },
+  });
 }
 
 export function useAccounts(includeArchived = false) {

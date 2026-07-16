@@ -19,7 +19,10 @@ vi.mock("@/hooks/useTransactions", () => ({
   useTransaction: vi.fn(),
 }));
 
-vi.mock("@/hooks/useAccounts", () => ({ useAdjustBalance: vi.fn() }));
+vi.mock("@/hooks/useAccounts", () => ({
+  useAdjustBalance: vi.fn(),
+  useAccounts: () => ({ data: [] }),
+}));
 vi.mock("@/hooks/useDebts", () => ({
   useCreateDebt: vi.fn(),
   useDisburseDebt: vi.fn(),

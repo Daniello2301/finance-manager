@@ -30,6 +30,7 @@ import {
   createTransactionSchema,
   updateTransactionSchema,
 } from "@/lib/validation/transactions";
+import { useAccounts } from "@/hooks/useAccounts";
 import { useSeedForm } from "@/hooks/useSeedForm";
 import { useTransactionModalStore } from "@/stores/transactionModal.store";
 import {
@@ -45,6 +46,8 @@ interface TransactionFormValues {
   amount: number;
   date: string;
   description?: string;
+  /** A deferred card purchase. 1 (or blank) means "not deferred". */
+  installmentCount?: number;
 }
 
 function todayIsoDate(): string {
@@ -93,6 +96,13 @@ export function TransactionForm() {
   });
 
   const selectedType = watch("type");
+  const selectedAccountId = watch("accountId");
+
+  const { data: accounts } = useAccounts();
+  const selectedAccount = accounts?.find((a) => a._id === selectedAccountId);
+  // Deferring only means anything on a credit card, and only for spending.
+  const canDefer =
+    selectedAccount?.type === "credit_card" && selectedType === "expense";
 
   useSeedForm({
     isOpen,
@@ -140,6 +150,13 @@ export function TransactionForm() {
       amount: toMinorUnits(values.amount, "COP"),
       date: new Date(values.date),
       description: values.description || undefined,
+      // The card is still debited IN FULL — your credit limit really does drop
+      // by the whole purchase the day you buy it. This only changes what each
+      // statement demands. It creates no Debt: that would count it twice.
+      installmentCount:
+        canDefer && values.installmentCount && values.installmentCount >= 2
+          ? Number(values.installmentCount)
+          : undefined,
     };
 
     try {
@@ -295,6 +312,30 @@ export function TransactionForm() {
               />
               <FieldError errors={[errors.description]} />
             </Field>
+
+            {canDefer && (
+              <Field data-invalid={!!errors.installmentCount}>
+                <FieldLabel htmlFor="transaction-installments">
+                  Diferir a cuotas (opcional)
+                </FieldLabel>
+                <Input
+                  id="transaction-installments"
+                  type="number"
+                  inputMode="numeric"
+                  min={2}
+                  max={48}
+                  placeholder="Sin diferir"
+                  aria-invalid={!!errors.installmentCount}
+                  {...register("installmentCount", { valueAsNumber: true })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  El saldo de la tarjeta baja igual por la compra completa — tu
+                  cupo también. Lo que cambia es cuánto te cobra el extracto de
+                  cada mes.
+                </p>
+                <FieldError errors={[errors.installmentCount]} />
+              </Field>
+            )}
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" onClick={close}>

@@ -1,55 +1,12 @@
 import { connectDB } from "@/lib/db";
 import Account from "@/lib/models/Account";
-import Category, { type ICategory } from "@/lib/models/Category";
 import { type ITransaction } from "@/lib/models/Transaction";
 import { NotFoundError } from "@/lib/errors";
 import { createTransaction } from "@/lib/services/transactions";
-
-export const ADJUSTMENT_CATEGORY_NAME = "Ajuste de saldo";
-
-/**
- * The category every balance adjustment lands in, created on first use.
- *
- * It is not one of the 21 categories seeded at signup, and backfilling every
- * existing user would be a migration for a category most of them will never
- * touch. Find-or-create costs one indexed lookup and is correct for both the
- * users who predate this feature and the ones who come after.
- *
- * The unique {userId, name, type} index is the real backstop: two concurrent
- * adjustments can't create it twice.
- */
-async function adjustmentCategory(userId: string): Promise<ICategory> {
-  const existing = await Category.findOne({
-    userId,
-    name: ADJUSTMENT_CATEGORY_NAME,
-    type: "income",
-  });
-  if (existing) return existing;
-
-  try {
-    return await Category.create({
-      userId,
-      name: ADJUSTMENT_CATEGORY_NAME,
-      type: "income",
-      isDefault: true,
-    });
-  } catch (error) {
-    // Lost the race against a concurrent adjustment — the other one created it.
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      (error as { code?: number }).code === 11000
-    ) {
-      const raced = await Category.findOne({
-        userId,
-        name: ADJUSTMENT_CATEGORY_NAME,
-        type: "income",
-      });
-      if (raced) return raced;
-    }
-    throw error;
-  }
-}
+import {
+  ADJUSTMENT_CATEGORY,
+  findOrCreateCategory,
+} from "@/lib/services/systemCategories";
 
 /**
  * Recognises money the app didn't know the account had.
@@ -76,7 +33,11 @@ export async function adjustAccountBalance(
     throw new NotFoundError("La cuenta no existe o no te pertenece");
   }
 
-  const category = await adjustmentCategory(userId);
+  const category = await findOrCreateCategory(
+    userId,
+    ADJUSTMENT_CATEGORY,
+    "income"
+  );
 
   return createTransaction(userId, {
     accountId,

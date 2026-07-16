@@ -19,6 +19,12 @@ vi.mock("@/stores/transactionModal.store", () => ({
   useTransactionModalStore: vi.fn(),
 }));
 
+// The form reads the accounts to know whether the selected one is a credit card
+// (only a card purchase can be deferred to instalments).
+vi.mock("@/hooks/useAccounts", () => ({
+  useAccounts: () => ({ data: [] }),
+}));
+
 vi.mock("@/components/AccountSelect", () => ({
   AccountSelect: ({
     id,

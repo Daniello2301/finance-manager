@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useAccounts";
 import { cn } from "@/lib/utils";
 import { availableBalance, isOverdrawn } from "@/lib/balance";
+import { CardStatement } from "./CardStatement";
 
 const TYPE_LABELS: Record<Account["type"], string> = {
   bank: "Banco",
@@ -77,6 +78,13 @@ export function AccountCard({ account }: { account: Account }) {
             En descubierto. Este dinero salió de algún sitio: revisa si falta
             registrar un ingreso o un préstamo.
           </p>
+        )}
+        {/* The balance above is what you OWE. This is what you must PAY, and by
+            when — a different number, and the one people actually act on. */}
+        {!account.isArchived && (
+          <div className="mt-2">
+            <CardStatement account={account} />
+          </div>
         )}
       </CardContent>
       {/* `flex-wrap`: three unshrinkable buttons ("Recalcular saldo" is wide)
