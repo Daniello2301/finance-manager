@@ -26,6 +26,16 @@ export async function verifyCredentials(
     return null;
   }
 
+  // A Google account has no password (FR-018). Returning null — rather than
+  // "this account uses Google" — is deliberate: a distinguishable answer here
+  // would tell an attacker which addresses are registered, which is the exact
+  // leak FR-014 exists to prevent. Without this guard bcryptjs is handed
+  // `undefined` and THROWS ("Illegal arguments"), surfacing as a broken login
+  // rather than a refused one.
+  if (!user.passwordHash) {
+    return null;
+  }
+
   const isValid = await bcryptjs.compare(password, user.passwordHash);
   if (!isValid) {
     return null;

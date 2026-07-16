@@ -69,6 +69,30 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(401);
   });
 
+  // FR-018. Without the guard in verifyCredentials, bcryptjs is handed an
+  // undefined hash and THROWS — a 500 that reads as "the app is broken" instead
+  // of a refused login. And the answer must be the SAME 401 as any other bad
+  // credential: replying "this account uses Google" would tell an attacker the
+  // address is registered, which is the leak FR-014 exists to prevent.
+  it("returns an indistinguishable 401 when the account has no password (Google)", async () => {
+    await User.create({
+      email: "google@example.com",
+      name: "Cuenta de Google",
+      googleId: "google-sub-123",
+    });
+
+    const googleRes = await POST(
+      makeRequest({ email: "google@example.com", password: "Whatever123!" })
+    );
+    const noSuchUserRes = await POST(
+      makeRequest({ email: "nosuchuser@example.com", password: "Whatever123!" })
+    );
+
+    expect(googleRes.status).toBe(401);
+    expect(googleRes.status).toBe(noSuchUserRes.status);
+    expect(await googleRes.json()).toEqual(await noSuchUserRes.json());
+  });
+
   it("returns the exact same 401 body for a nonexistent email as for a wrong password", async () => {
     await seedUser();
     const wrongPasswordRes = await POST(

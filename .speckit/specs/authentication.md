@@ -170,6 +170,10 @@ Then:
 | FR-012 | Current user data available in API routes via session | P1 | `getServerSession()` in API routes |
 | FR-013 | Inactive sessions expire after 30 minutes | P2 | Sliding window or absolute timeout |
 | FR-014 | Error messages don't leak info (no "user not found" etc) | P1 | Security: return "Invalid email or password" |
+| FR-015 | Entrar con Google crea el `User` si no existe, **y le siembra las 21 categorías por defecto** | P1 | Añadido 2026-07-16. El sembrado vivía solo en `/api/auth/signup`, que un login OAuth **nunca toca**: sin esto el usuario entra con cero categorías y no puede registrar ni un gasto (toda `Transaction`/`Budget` exige `categoryId`). Mismo borrado compensatorio que el signup si la siembra falla |
+| FR-016 | Si el correo de Google **ya existe** como cuenta, se **vincula** a esa misma cuenta (no se crea una segunda) | P1 | Añadido 2026-07-16. Solo si Google reporta `email_verified: true`. Conserva todos los datos de la cuenta existente |
+| FR-017 | Un perfil de Google **sin `email_verified`** no puede entrar | P1 | Añadido 2026-07-16. **Es la regla que sostiene FR-016**: sin ella, cualquiera que registre ese correo en Google sin probarlo se apropiaría de la cuenta por coincidencia de correo. Es apropiación de cuenta, no un detalle |
+| FR-018 | Una cuenta creada con Google **no puede entrar con contraseña** | P1 | Añadido 2026-07-16. No tiene `passwordHash`. Devuelve `null` como cualquier credencial inválida — **no** un mensaje distinto, que delataría qué correos existen (FR-014) |
 
 ---
 
@@ -376,6 +380,7 @@ export const authOptions = {
 4. **No Email Verification in MVP**: P3 feature — users can fake emails for now
 5. **Error Messages**: Generic "Invalid email or password" on login failure prevents user enumeration attacks
 6. **Rate Limiting**: Not included in MVP but should be added before production (prevents brute-force attacks on login)
+7. **Google como proveedor adicional** (añadido 2026-07-16, ratificado en el Decision Log de la constitución). Se añade `GoogleProvider` al NextAuth existente — **no** se reemplaza el login por correo y contraseña, que sigue siendo de primera clase. Cuatro reglas nuevas, en FR-015..FR-018 abajo. La razón de que esto quepa en una enmienda y no en un módulo nuevo: la identidad del usuario **sigue siendo nuestro `User._id`**, y por tanto el Principio 8 (todo cuelga de nuestro `userId`) no se toca. Fue exactamente el motivo por el que se rechazó Clerk (2026-07-13): allí la identidad *no* era nuestro ObjectId.
 
 ---
 

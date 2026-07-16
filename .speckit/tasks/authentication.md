@@ -205,11 +205,34 @@ npm run format
 
 ---
 
+## Phase 7: Acceso con Google (añadida 2026-07-16)
+
+Enmienda, no módulo nuevo: la identidad sigue siendo **nuestro `User._id`** (el `sub` de Google se
+guarda como enlace, nunca como identidad), así que el Principio 8 no se toca. Ratificada en el
+Decision Log; reglas en FR-015..FR-018 de la spec.
+
+| ID | Task | [P] | Status |
+|-------|------|-----|--------|
+| [T080] | `User`: `passwordHash` deja de ser obligatorio (una cuenta de Google no tiene) + `googleId` con índice **sparse** unique (solo indexa a los vinculados; sin migración). **No** un enum `provider`: un usuario puede tener contraseña **y** Google, y el enum tendría que mentir sobre uno de los dos | - | ✅ |
+| [T081] | `src/lib/auth/googleUser.ts` **test-first** (8 tests): busca por `googleId` → por correo (vincula) → crea. **FR-015**: siembra las 21 categorías con el mismo borrado compensatorio que el signup — un login OAuth nunca pasa por `/api/auth/signup`, y sin esto el usuario entra con cero categorías y no puede registrar ni un gasto | - | ✅ |
+| [T082] | **FR-017**: sin `email_verified` de Google no se entra ni se vincula. Es la regla que sostiene FR-016: vincular por correo sin la garantía de Google es regalar la cuenta a quien registre ese correo | - | ✅ |
+| [T083] | **FR-018**: `verifyCredentials` devuelve `null` si no hay `passwordHash`. Sin el guard, bcryptjs recibía `undefined` y **lanzaba** → 500 en vez de login rechazado. Devuelve el **mismo** 401 que cualquier credencial inválida: un mensaje propio delataría qué correos existen (FR-014). Test en la ruta de login | - | ✅ |
+| [T084] | `auth.ts`: `GoogleProvider` **junto** a Credentials. El callback `signIn` es el único que puede **denegar**, así que ahí va el gate y el find-or-create; normaliza `user.id` a **nuestro ObjectId** antes de que `jwt` lo lea (si el `sub` de Google llegara a `session.user.id`, las 7 colecciones buscarían un usuario inexistente) | - | ✅ |
+| [T085] | `GoogleButton` (5 tests) en login y signup, con el mensaje de la denegación: NextAuth devuelve a `/login?error=AccessDenied` y sin esto la refusal se traga en silencio | - | ✅ |
+| [T086] | El botón **no se pinta** si faltan `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (leído en el Server Component; solo cruza el booleano). Un botón visible que no puede funcionar es peor que ninguno, y desacopla desplegar de configurar | - | ✅ |
+| [T087] | Gates: type-check, lint, suite completa, build | - | ✅ |
+| [T088] | Credenciales en Google Cloud Console + env vars en `.env.local` y Vercel (**del dueño**) | - | ⬜ |
+| [T089] | Click-through real en navegador, **sobre todo la vinculación con la cuenta existente del dueño** (FR-016). OAuth exige un redirect real a Google: no se puede conducir con curl, y Playwright se cuelga en este entorno | - | ⬜ |
+
+---
+
 ## Blockers & Risks
 
 - **[T001 Blocker]**: NEXTAUTH_SECRET and MONGODB_URI must be set or other tasks blocked
 - **[T002 Blocker]**: If MongoDB doesn't connect, all DB tasks blocked
 - **[T020 Blocker]**: NextAuth config must be complete before API routes work
+- **[T088/T089 Blocker]**: sin las credenciales de Google no hay flujo que probar. El código está
+  listo y el botón permanece oculto hasta que existan, así que no bloquea nada más
 
 ---
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import {
   Card,
@@ -8,10 +9,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SignupForm } from "@/components/forms/SignupForm";
+import { GoogleButton } from "@/components/forms/GoogleButton";
 
 export const metadata: Metadata = {
   title: "Crear cuenta — Finanzas Personales",
 };
+
+/** See login/page.tsx — only the boolean crosses to the client, never the secret. */
+function isGoogleConfigured(): boolean {
+  return Boolean(
+    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  );
+}
 
 export default function SignupPage() {
   return (
@@ -24,6 +33,13 @@ export default function SignupPage() {
       </CardHeader>
       <CardContent>
         <SignupForm />
+        {isGoogleConfigured() && (
+          <Suspense fallback={null}>
+            <div className="mt-4">
+              <GoogleButton label="Registrarse con Google" />
+            </div>
+          </Suspense>
+        )}
         <p className="mt-4 text-center text-sm text-muted-foreground">
           ¿Ya tienes cuenta?{" "}
           <Link
