@@ -62,8 +62,8 @@ en el Decision Log (2026-07-15, sobregiro automático = hecho consumado).
 - [x] **T060** — Gates: type-check ✅, lint ✅ (0 errores), 781 tests ✅, cobertura **82.22%** ✅,
   **`recurrence.ts` al 100%** en stmts/branches/funcs/lines ✅, build ✅ (27+ rutas, sin errores de
   bundle cliente — el motor puro sin Mongoose cumplió su función).
-- [ ] **T061** — E2E contra producción (Scenarios 1–9 donde apliquen; el 3 y el 8 son los críticos).
-- [ ] **T062** — Commit + push; actualizar memoria.
+- [x] **T061** — E2E contra producción: **22/22 checks PASS**. Scenario 1 (sin backfill), 5 (monto corregido sin tocar la plantilla), 6 (saltar), 7 (el automático en descubierto se registra), 9 (404 ajeno) + id malformado → 422. **Scenario 3/4 (idempotencia) probados de verdad, no vacuamente**: catch-up ×2 sobre un vencimiento real → created 1/0, una sola transacción, el saldo baja UNA vez; y forzando 2 meses de atraso → 3 transacciones, todas con clave única, repetir crea 0. Datos borrados de Atlas.
+- [x] **T062** — Commit `3da8232` + push (desplegado). Memoria actualizada.
 
 ## Legend
 ✅ hecho · ⚠️ crítico · 🚫 bloqueado · ⬜ pendiente
